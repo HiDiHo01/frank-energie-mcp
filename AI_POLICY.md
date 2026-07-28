@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This repository contains the MCP server for Frank Energie. The server is a separate layer above `python-frank-energie` and must remain lightweight, deterministic, and easy to audit. AI may assist development, but all changes require human review.
+This repository contains a standalone MCP server for Frank Energie. AI can assist with development, but all contributions require human review and must keep the repository thin, auditable, and aligned with `python-frank-energie`.
 
 ## Allowed use of AI
 
@@ -10,9 +10,9 @@ AI may be used to:
 
 - draft or refactor MCP tools, resources, prompts, and documentation
 - generate or improve tests
-- explain architecture, protocols, and edge cases
+- explain architecture, protocol choices, and edge cases
 - improve validation, typing, logging, and error handling
-- assist with issue triage and pull request reviews
+- assist with issue triage and pull request review
 
 ## Prohibited use
 
