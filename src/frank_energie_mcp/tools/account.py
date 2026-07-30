@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from ..library import default_library_bridge
 from ..models import ToolResponse
 
 
@@ -29,11 +30,11 @@ def _extract_account_payload(data: Any) -> AccountResult:
     return AccountResult(message="Not implemented yet.")
 
 
+async def get_account() -> ToolResponse:
+    """Return the account payload from the Frank Energie library."""
+    bridge = default_library_bridge()
+    async with bridge.session() as client:
+        data = await client.user()
 
-def get_account() -> ToolResponse:
-    """Return the account payload.
-
-    The actual `python-frank-energie` integration will be wired in next.
-    """
-    result = _extract_account_payload(None)
+    result = _extract_account_payload(data)
     return ToolResponse(status="ok", data=result)
