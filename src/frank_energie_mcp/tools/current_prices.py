@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from ..models import ToolResponse
 
@@ -12,14 +13,27 @@ class CurrentPricesResult:
     """Represent the current prices tool payload."""
 
     message: str
+    source: str = "python-frank-energie"
+
+
+
+def _extract_current_prices_payload(data: Any) -> CurrentPricesResult:
+    """Convert library data into the MCP response model.
+
+    This helper keeps the MCP boundary narrow and provides a single place for
+    adapting the eventual `python-frank-energie` response shape.
+    """
+    if isinstance(data, CurrentPricesResult):
+        return data
+
+    return CurrentPricesResult(message="Not implemented yet.")
 
 
 
 def get_current_prices() -> ToolResponse:
     """Return the current price payload.
 
-    This is still a scaffold, but the return shape is now explicit and
-    testable while the real `python-frank-energie` integration is added.
+    The actual `python-frank-energie` integration will be wired in next.
     """
-    result = CurrentPricesResult(message="Not implemented yet.")
+    result = _extract_current_prices_payload(None)
     return ToolResponse(status="ok", data=result)
