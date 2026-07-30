@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from typing import Any
 
+from ..library import default_library_bridge
 from ..models import ToolResponse
 
 
@@ -29,11 +31,11 @@ def _extract_current_prices_payload(data: Any) -> CurrentPricesResult:
     return CurrentPricesResult(message="Not implemented yet.")
 
 
+async def get_current_prices() -> ToolResponse:
+    """Return the current price payload from the Frank Energie library."""
+    bridge = default_library_bridge()
+    async with bridge.session() as client:
+        data = await client.prices(date.today(), date.today())
 
-def get_current_prices() -> ToolResponse:
-    """Return the current price payload.
-
-    The actual `python-frank-energie` integration will be wired in next.
-    """
-    result = _extract_current_prices_payload(None)
+    result = _extract_current_prices_payload(data)
     return ToolResponse(status="ok", data=result)
