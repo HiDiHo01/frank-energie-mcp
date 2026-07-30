@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from contextlib import AbstractAsyncContextManager, asynccontextmanager
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import date, timedelta
-from typing import Any, Protocol, Self
+from datetime import date
+from typing import Any, Protocol, cast
 
 
 class _AsyncFrankEnergie(Protocol):
@@ -45,7 +45,7 @@ class FrankEnergieLibraryBridge:
     factory: Callable[[], _AsyncFrankEnergie]
 
     @asynccontextmanager
-    async def session(self) -> AbstractAsyncContextManager[_AsyncFrankEnergie]:
+    async def session(self):
         """Create a managed Frank Energie client session."""
         client = self.factory()
         try:
@@ -65,6 +65,6 @@ def default_library_bridge() -> FrankEnergieLibraryBridge:
     def _factory() -> _AsyncFrankEnergie:
         from python_frank_energie.frank_energie import FrankEnergie
 
-        return FrankEnergie()
+        return cast(_AsyncFrankEnergie, FrankEnergie())
 
     return FrankEnergieLibraryBridge(factory=_factory)
