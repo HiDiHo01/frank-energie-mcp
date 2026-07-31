@@ -13,6 +13,7 @@ The server should expose Frank Energie data through MCP tools, resources, and pr
 - Prefer read-only operations for the first release.
 - Avoid duplicating backend logic in the MCP server.
 - Return data that is easy for LLMs to summarize and compare.
+- Build the server on the official Python MCP SDK using a FastMCP-style runtime.
 
 ## Tool categories
 
