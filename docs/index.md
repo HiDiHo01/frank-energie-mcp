@@ -16,6 +16,10 @@ This repository contains the standalone Frank Energie MCP server.
 - [Code of Conduct](../CODE_OF_CONDUCT.md)
 - [AI Policy](../AI_POLICY.md)
 
+## Runtime
+
+The server is intended to use the official Python MCP SDK with a FastMCP-style runtime.
+
 ## Project files
 
 - `README.md` — project overview and setup goals
