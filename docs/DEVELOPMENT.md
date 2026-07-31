@@ -4,6 +4,7 @@
 
 - Python 3.14 or newer
 - a working checkout of `python-frank-energie`
+- the official Python MCP SDK using a FastMCP-style runtime
 - a modern async-friendly development environment
 
 ## Goals
@@ -15,6 +16,7 @@ Development in this repository should be:
 - test-covered
 - easy to review
 - aligned with the shared Frank Energie library
+- aligned with the official MCP SDK and its FastMCP-style server model
 
 ## Local workflow
 
@@ -53,6 +55,8 @@ When adding tools, resources, or prompts:
 - return deterministic payloads where possible
 - translate backend errors into user-friendly MCP errors
 - avoid leaking internal stack traces or secrets
+- keep `server.py` thin and focused on MCP registration
+- keep domain logic in `library.py` and `python-frank-energie`
 
 ## Testing guidance
 
