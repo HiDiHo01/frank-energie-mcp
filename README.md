@@ -36,6 +36,10 @@ Frank Energie API
 - Provide deterministic tool output for LLMs.
 - Keep the codebase async-first, typed, and testable.
 
+## Runtime choice
+
+This repository is designed around the official Python MCP SDK and a FastMCP-style server. Tools should remain async, resources should be read-only, and prompts should stay lightweight and deterministic.
+
 ## First milestone
 
 The first release should expose these tools:
