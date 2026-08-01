@@ -10,7 +10,7 @@ from typing import Any, Protocol, cast
 
 
 class _AsyncFrankEnergie(Protocol):
-    """Protocol for the subset of the FrankEnergie API used by the MCP layer."""
+    """Protocol for the subset of the Frank Energie API used by the MCP layer."""
 
     async def login(self, username: str, password: str) -> Any:
         """Authenticate with Frank Energie."""
