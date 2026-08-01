@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from typing import Any, Protocol, cast
 
 
@@ -54,6 +54,44 @@ class FrankEnergieLibraryBridge:
             await client.close()
 
 
+@dataclass(slots=True, frozen=True)
+class FrankEnergieService:
+    """High-level service helpers for MCP tool handlers."""
+
+    bridge: FrankEnergieLibraryBridge
+
+    async def get_current_prices(self) -> Any:
+        """Return current prices for today."""
+        async with self.bridge.session() as client:
+            return await client.prices(date.today(), date.today())
+
+    async def get_today_prices(self) -> Any:
+        """Return today's prices."""
+        async with self.bridge.session() as client:
+            return await client.prices(date.today(), date.today())
+
+    async def get_tomorrow_prices(self) -> Any:
+        """Return tomorrow's prices."""
+        tomorrow = date.today() + timedelta(days=1)
+        async with self.bridge.session() as client:
+            return await client.prices(tomorrow, tomorrow)
+
+    async def get_gas_price(self) -> Any:
+        """Return gas pricing data."""
+        async with self.bridge.session() as client:
+            return await client.prices(date.today(), date.today())
+
+    async def get_account(self) -> Any:
+        """Return the current account data."""
+        async with self.bridge.session() as client:
+            return await client.user()
+
+    async def list_sites(self) -> Any:
+        """Return the available sites."""
+        async with self.bridge.session() as client:
+            return await client.user()
+
+
 
 def default_library_bridge() -> FrankEnergieLibraryBridge:
     """Return the default bridge for `python_frank_energie`.
@@ -68,3 +106,9 @@ def default_library_bridge() -> FrankEnergieLibraryBridge:
         return cast(_AsyncFrankEnergie, FrankEnergie())
 
     return FrankEnergieLibraryBridge(factory=_factory)
+
+
+
+def default_service() -> FrankEnergieService:
+    """Return the default high-level service helper."""
+    return FrankEnergieService(bridge=default_library_bridge())
