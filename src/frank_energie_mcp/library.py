@@ -57,7 +57,7 @@ class _AsyncFrankEnergie(Protocol):
     async def month_insights(self, site_reference: str, date: str) -> Any:
         """Return upstream monthly usage and cost insights."""
 
-    async def month_summary(self) -> Any:
+    async def month_summary(self, site_reference: str) -> Any:
         """Return the month summary."""
 
     async def prices(
@@ -585,7 +585,7 @@ class FrankEnergieService:
         async with self.bridge.session() as client:
             data = await client.smart_pv_systems()
         if data is None:
-            systems: list[Any] = []
+            systems = []
         else:
             systems = getattr(data, "systems", None)
             if not isinstance(systems, list):
@@ -656,9 +656,9 @@ class FrankEnergieService:
             enabled = getattr(settings, "is_smart_charging_enabled", None)
             if any(type(flag) is not bool for flag in (reachable, capable, enabled)):
                 raise ValueError("Unexpected electric vehicle capability flags.")
-            reachable_count += int(reachable)
-            smart_capable_count += int(capable)
-            smart_enabled_count += int(enabled)
+            reachable_count += int(reachable is True)
+            smart_capable_count += int(capable is True)
+            smart_enabled_count += int(enabled is True)
         return {
             "vehicle_count": len(vehicles),
             "reachable_count": reachable_count,
