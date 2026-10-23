@@ -211,6 +211,16 @@ Raw sessions, device IDs and trading metadata are not serialized
 into the MCP response. Date range and authentication are validated;
 no battery configuration is modified.
 
+## Billing-period usage and costs boundary
+
+The period totals tool delegates to upstream
+`period_usage_and_costs(site_reference, start_date)` and
+allowlists three energy categories with their units, usage totals
+and cost totals. It does not reimplement upstream billing
+calculations, and does not serialize raw usage items, period IDs
+or customer identifiers. Credentials and a site reference are
+required. The operation is read-only.
+
 ## Authentication and privacy
 
 Public market-price tools work without configured credentials. Account/site operations require `FRANK_ENERGIE_USERNAME` and `FRANK_ENERGIE_PASSWORD`; account operations also require `FRANK_ENERGIE_SITE_REFERENCE`. The bridge reads these from the process environment. Credentials are not passed as MCP tool arguments.
