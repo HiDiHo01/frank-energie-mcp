@@ -10,6 +10,14 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any, Literal, Protocol, cast
 from zoneinfo import ZoneInfo
 
+from .optimization import (
+    battery_savings,
+    best_start,
+    energy_cost,
+    split_periods,
+    threshold_periods,
+    validated_series,
+)
 from .price_schemas import normalize_interval, normalize_market_prices
 
 PriceResolution = Literal["PT15M", "PT60M"]
@@ -203,6 +211,141 @@ class FrankEnergieService:
             ),
             "gas": _extreme_period(
                 normalized["gas"], requested_day, period_minutes, step, highest
+            ),
+        }
+
+    async def _optimization_data(
+        self, day: date | None, resolution: PriceResolution
+    ) -> tuple[date, dict[str, Any]]:
+        """Retrieve one bounded normalized market-price response."""
+        requested_day = day or datetime.now(ZoneInfo("Europe/Amsterdam")).date()
+        async with self.bridge.session() as client:
+            prices = await client.prices(requested_day, resolution=resolution)
+        return requested_day, normalize_market_prices(prices)
+
+    async def get_best_start_time(
+        self,
+        duration_minutes: int,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+        earliest_start: datetime | None = None,
+        latest_end: datetime | None = None,
+    ) -> dict[str, Any]:
+        """Return the cheapest continuous start window for each energy type."""
+        for bound in (earliest_start, latest_end):
+            if bound is not None and (bound.tzinfo is None or bound.utcoffset() is None):
+                raise ValueError("Time bounds must be timezone-aware.")
+        earliest = earliest_start.astimezone(UTC) if earliest_start else None
+        latest = latest_end.astimezone(UTC) if latest_end else None
+        if earliest and latest and earliest >= latest:
+            raise ValueError("earliest_start must precede latest_end.")
+        requested_day, prices = await self._optimization_data(day, resolution)
+        return {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+            "duration_minutes": duration_minutes,
+            **{
+                energy: best_start(
+                    validated_series(prices[energy], requested_day, resolution),
+                    duration_minutes,
+                    resolution,
+                    earliest,
+                    latest,
+                )
+                for energy in ("electricity", "gas")
+            },
+        }
+
+    async def calculate_energy_cost(
+        self,
+        power_kw: float,
+        duration_minutes: int,
+        start_time: datetime,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Estimate fixed-power electricity consumption from normalized total prices."""
+        if start_time.tzinfo is None or start_time.utcoffset() is None:
+            raise ValueError("start_time must be timezone-aware.")
+        start = start_time.astimezone(UTC)
+        requested_day = start.astimezone(ZoneInfo("Europe/Amsterdam")).date()
+        _, prices = await self._optimization_data(requested_day, resolution)
+        result = energy_cost(
+            validated_series(prices["electricity"], requested_day, resolution),
+            start,
+            duration_minutes,
+            power_kw,
+            resolution,
+        )
+        return {"date": requested_day.isoformat(), "resolution": resolution, **result}
+
+    async def get_price_threshold_periods(
+        self,
+        threshold: float,
+        below: bool = True,
+        minimum_duration_minutes: int = 15,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Group consecutive intervals strictly below or above a total-price threshold."""
+        requested_day, prices = await self._optimization_data(day, resolution)
+        return {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+            **{
+                energy: threshold_periods(
+                    validated_series(prices[energy], requested_day, resolution),
+                    threshold,
+                    below,
+                    minimum_duration_minutes,
+                )
+                for energy in ("electricity", "gas")
+            },
+        }
+
+    async def get_best_split_periods(
+        self,
+        total_minutes: int,
+        minimum_block_minutes: int,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Choose the cheapest nonoverlapping full-length blocks per energy type."""
+        requested_day, prices = await self._optimization_data(day, resolution)
+        return {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+            **{
+                energy: split_periods(
+                    validated_series(prices[energy], requested_day, resolution),
+                    total_minutes,
+                    minimum_block_minutes,
+                    resolution,
+                )
+                for energy in ("electricity", "gas")
+            },
+        }
+
+    async def calculate_battery_savings(
+        self,
+        capacity_kwh: float,
+        charge_power_kw: float,
+        discharge_power_kw: float,
+        round_trip_efficiency: float,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Estimate a single idealized battery arbitrage cycle using public prices."""
+        requested_day, prices = await self._optimization_data(day, resolution)
+        return {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+            "electricity": battery_savings(
+                validated_series(prices["electricity"], requested_day, resolution),
+                capacity_kwh,
+                charge_power_kw,
+                discharge_power_kw,
+                round_trip_efficiency,
+                resolution,
             ),
         }
 
