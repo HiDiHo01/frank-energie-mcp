@@ -294,6 +294,18 @@ def create_server(
         return await safe_tool_call(energy_service.get_electric_vehicle_count)
 
     @server.tool()
+    async def get_smart_feed_in_status() -> object:
+        """Read privacy-filtered smart feed-in enrollment status."""
+        return await safe_tool_call(energy_service.get_smart_feed_in_status)
+
+    @server.tool()
+    async def get_contract_price_resolution_state(connection_id: str) -> object:
+        """Read contract resolution options without requesting any changes."""
+        return await safe_tool_call(
+            lambda: energy_service.get_contract_price_resolution_state(connection_id)
+        )
+
+    @server.tool()
     async def get_account() -> object:
         """Get the authenticated account information."""
         await safe_tool_call(energy_service.get_account)
