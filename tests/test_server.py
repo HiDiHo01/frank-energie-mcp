@@ -7,6 +7,7 @@ from contextlib import suppress
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from mcp.server.fastmcp.exceptions import ToolError
 
 from frank_energie_mcp.server import SERVER_NAME, create_server
 
@@ -157,8 +158,9 @@ async def test_mcp_price_resolution_parameter() -> None:
     server = create_server(service)
     await server.call_tool("get_current_prices", {"resolution": "PT60M"})
     service.get_current_prices.assert_awaited_once_with(resolution="PT60M")
-    with pytest.raises(ValueError):
+    with pytest.raises(ToolError, match="validation error"):
         await server.call_tool("get_current_prices", {"resolution": "PT30M"})
+    service.get_current_prices.assert_awaited_once_with(resolution="PT60M")
 
 
 def test_main_starts_local_http_transport(monkeypatch: pytest.MonkeyPatch) -> None:
