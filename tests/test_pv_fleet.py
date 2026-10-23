@@ -59,11 +59,7 @@ async def test_pv_fleet_missing_and_invalid() -> None:
     assert result["system_count"] == 0
     assert result["total_capacity_kwp"] is None
     client.smart_pv_systems.return_value = SimpleNamespace(
-        systems=[
-            SimpleNamespace(
-                panel_groups=[SimpleNamespace(panel_count=-1, capacity_kwp=1.0)]
-            )
-        ]
+        systems=[SimpleNamespace(panel_groups=[SimpleNamespace(panel_count=-1, capacity_kwp=1.0)])]
     )
     with pytest.raises(ValueError, match="panel count"):
         await make_service(client).get_smart_pv_fleet_statistics()
