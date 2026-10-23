@@ -59,6 +59,15 @@ class _AsyncFrankEnergie(Protocol):
     ) -> Any:
         """Return customer market prices using the upstream method signature."""
 
+    async def smart_batteries(self) -> Any:
+        """Return linked smart batteries."""
+
+    async def smart_pv_systems(self) -> Any:
+        """Return linked solar PV systems."""
+
+    async def enode_vehicles(self) -> Any:
+        """Return linked electric vehicles."""
+
     async def close(self) -> None:
         """Close the underlying HTTP session."""
 
@@ -474,6 +483,31 @@ class FrankEnergieService:
                 datetime.now(ZoneInfo("Europe/Amsterdam")).date(), resolution=resolution
             )
         return _current_price(prices.gas)
+
+    async def _linked_device_count(self, operation: str, field: str) -> dict[str, int]:
+        """Return only a collection count, never identifiers or device metadata."""
+        if not self.bridge.username or not self.bridge.password:
+            raise RuntimeError("Device access requires Frank Energie credentials.")
+        async with self.bridge.session() as client:
+            data = await getattr(client, operation)()
+        if data is None:
+            return {"count": 0}
+        devices = getattr(data, field, None)
+        if not isinstance(devices, list):
+            raise ValueError("Unexpected upstream device collection.")
+        return {"count": len(devices)}
+
+    async def get_smart_battery_count(self) -> dict[str, int]:
+        """Count linked smart batteries without exposing device information."""
+        return await self._linked_device_count("smart_batteries", "batteries")
+
+    async def get_smart_pv_system_count(self) -> dict[str, int]:
+        """Count linked smart solar systems without exposing device information."""
+        return await self._linked_device_count("smart_pv_systems", "systems")
+
+    async def get_electric_vehicle_count(self) -> dict[str, int]:
+        """Count linked Enode electric vehicles without exposing identifiers."""
+        return await self._linked_device_count("enode_vehicles", "vehicles")
 
     async def get_account(self) -> Any:
         """Return account data for the configured delivery site."""
