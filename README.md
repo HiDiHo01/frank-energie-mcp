@@ -32,10 +32,10 @@ Example client configuration (adapt the Python executable to the environment whe
 
 | Kind | Name | Current behavior |
 | --- | --- | --- |
-| Tool | `get_current_prices` | Fetches today's market prices; current interval not yet isolated |
+| Tool | `get_current_prices` | Returns current electricity and gas intervals via upstream `current_hour` |
 | Tool | `get_today_prices` | Fetches today's market prices |
 | Tool | `get_tomorrow_prices` | Fetches tomorrow's market prices |
-| Tool | `get_gas_price` | Fetches today's market prices; gas not yet isolated |
+| Tool | `get_gas_price` | Returns the current gas interval or `null` when unavailable |
 | Tool | `get_account` | Not operational; authentication and site reference are missing |
 | Tool | `list_sites` | Delegates to upstream `UserSites()`; authentication required |
 | Resource | `frank-energie://capabilities` | Static description of capabilities |
@@ -75,7 +75,7 @@ Tests use mock clients; they do not require production credentials. These comman
 ## Known limitations
 
 - Account authentication and site-reference selection are not implemented.
-- Current-interval and gas-only price extraction are not implemented.
+- Current-interval and gas-only extraction use upstream `current_hour`; complete serialization and integration validation remain pending.
 - Upstream response serialization and privacy-safe error handling need verification.
 - End-to-end MCP client interoperability has not been validated.
 
