@@ -6,8 +6,8 @@ from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from typing import Any, AsyncIterator, Protocol, cast
 from zoneinfo import ZoneInfo
-from typing import Any, Protocol, cast
 
 
 class _AsyncFrankEnergie(Protocol):
@@ -49,7 +49,7 @@ class FrankEnergieLibraryBridge:
     factory: Callable[[], _AsyncFrankEnergie]
 
     @asynccontextmanager
-    async def session(self):
+    async def session(self) -> AsyncIterator[_AsyncFrankEnergie]:
         """Create a managed Frank Energie client session."""
         client = self.factory()
         try:
@@ -67,16 +67,16 @@ class FrankEnergieService:
     async def get_current_prices(self) -> Any:
         """Return current prices for today."""
         async with self.bridge.session() as client:
-            return await client.prices(datetime.now(ZoneInfo("Europe/Amsterdam")).date(), date.today())
+            return await client.prices(datetime.now(ZoneInfo("Europe/Amsterdam")).date())
 
     async def get_today_prices(self) -> Any:
         """Return today's prices."""
         async with self.bridge.session() as client:
-            return await client.prices(date.today(), date.today())
+            return await client.prices(datetime.now(ZoneInfo("Europe/Amsterdam")).date())
 
     async def get_tomorrow_prices(self) -> Any:
         """Return tomorrow's prices."""
-        tomorrow = date.today() + timedelta(days=1)
+        tomorrow = datetime.now(ZoneInfo("Europe/Amsterdam")).date() + timedelta(days=1)
         async with self.bridge.session() as client:
             return await client.prices(tomorrow)
 
@@ -87,8 +87,7 @@ class FrankEnergieService:
 
     async def get_account(self) -> Any:
         """Return the current account data."""
-        async with self.bridge.session() as client:
-            raise RuntimeError("Account retrieval requires an authenticated client and site reference.")
+        raise RuntimeError("Account retrieval requires an authenticated client and site reference.")
 
     async def list_sites(self) -> Any:
         """Return the available sites."""
