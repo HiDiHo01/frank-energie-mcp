@@ -42,9 +42,7 @@ async def test_cheapest_and_most_expensive_four_hours(resolution: str, step: int
     start = datetime(2026, 6, 14, 22, tzinfo=UTC)
     per_hour = 60 // step
     entries = [
-        _record(
-            start + timedelta(minutes=i * step), step, 0.1 if i < 4 * per_hour else 0.5
-        )
+        _record(start + timedelta(minutes=i * step), step, 0.1 if i < 4 * per_hour else 0.5)
         for i in range(8 * per_hour)
     ]
     service, client = _service(entries)
