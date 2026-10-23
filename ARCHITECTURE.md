@@ -154,6 +154,16 @@ a count. The MCP boundary maps exceptions to a generic client-facing
 error. Device identifiers and detailed configuration are deliberately
 excluded. Write-capable upstream methods remain unexposed.
 
+## Authenticated enrollment and contract resolution reads
+
+The account-status tools delegate directly to
+`python-frank-energie.user_smart_feed_in()` and
+`contract_price_resolution_state(connection_id)`. The service checks
+configured credentials and allowlists only stable, non-identifying
+boolean/status fields. Raw upstream models, connection identifiers and
+personal data are excluded from MCP output. Contract resolution changes
+remain intentionally unavailable as MCP tools.
+
 ## Authentication and privacy
 
 Public market-price tools work without configured credentials. Account/site operations require `FRANK_ENERGIE_USERNAME` and `FRANK_ENERGIE_PASSWORD`; account operations also require `FRANK_ENERGIE_SITE_REFERENCE`. The bridge reads these from the process environment. Credentials are not passed as MCP tool arguments.
