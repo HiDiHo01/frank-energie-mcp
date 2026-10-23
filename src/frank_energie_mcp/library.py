@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+import os
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
-import os
-from typing import Any, AsyncIterator, Protocol, cast
+from typing import Any, Protocol, cast
 from zoneinfo import ZoneInfo
 
 
@@ -20,7 +20,7 @@ class _AsyncFrankEnergie(Protocol):
     async def user(self, site_reference: str | None = None) -> Any:
         """Return the current user data."""
 
-    async def UserSites(self) -> Any:
+    async def UserSites(self) -> Any:  # noqa: N802 - upstream API method name
         """Return authenticated delivery sites."""
 
     async def invoices(self) -> Any:
@@ -110,6 +110,20 @@ class FrankEnergieService:
         async with self.bridge.session() as client:
             return await client.user()
 
+
+
+def _current_price(series: Any) -> dict[str, Any] | None:
+    """Return the active upstream interval as a JSON-compatible record."""
+    price = series.current_hour
+    if price is None:
+        return None
+    return {
+        "date_from": price.date_from.isoformat(),
+        "date_till": price.date_till.isoformat(),
+        "total": price.total,
+        "unit": price.unit,
+        "energy_type": price.energy_type,
+    }
 
 
 def default_library_bridge() -> FrankEnergieLibraryBridge:
