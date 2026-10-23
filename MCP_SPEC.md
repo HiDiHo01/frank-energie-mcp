@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Thirty-six read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Thirty-seven read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -50,6 +50,7 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_ev_charger_statistics` | `get_ev_charger_statistics(start_date)` | Authenticated EV charger reachability and smart charging counts |
 | `get_monthly_cost_insights` | `get_monthly_cost_insights(month)` | Authenticated monthly expected and actual cost totals |
 | `get_account_country` | `get_account_country()` | Authenticated two-letter account country code |
+| `get_smart_battery_fleet_statistics` | `get_smart_battery_fleet_statistics()` | Aggregate linked battery capacity and rated power |
 | `get_account` | `get_account()` | After a successful authenticated account request, returns only `{"authenticated": true}`; account details are deliberately not exposed |
 | `list_sites` | `list_sites()` | `{"count": N}` for a recognized site collection; site identifiers and addresses are not exposed |
 
@@ -353,6 +354,17 @@ upstream `user_country()`. It returns exactly one field,
 ASCII code. Invalid or missing codes are rejected. User IDs,
 email addresses and other account details are not returned.
 A site reference is not required. The tool is read-only.
+
+## Smart battery fleet statistics contract
+
+`get_smart_battery_fleet_statistics()` requires credentials
+and calls upstream `smart_batteries()`. It returns the total
+battery count, number with reported capacity, summed capacity
+in upstream kWh, and summed maximum charge/discharge power
+in upstream units. Missing values are excluded, and totals
+without observations are null. Nonfinite or negative values
+are rejected. Device identifiers and configuration are excluded.
+No battery mutations are invoked.
 
 ## Authentication and upstream access
 
