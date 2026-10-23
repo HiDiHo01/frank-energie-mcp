@@ -81,9 +81,7 @@ async def test_charger_statistics_requires_site() -> None:
     """Reject missing site references without upstream calls."""
     client = AsyncMock()
     with pytest.raises(RuntimeError, match="SITE_REFERENCE"):
-        await make_service(client, site=None).get_ev_charger_statistics(
-            date(2026, 10, 1)
-        )
+        await make_service(client, site=None).get_ev_charger_statistics(date(2026, 10, 1))
     client.enode_chargers.assert_not_awaited()
 
 
