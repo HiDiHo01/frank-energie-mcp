@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Twenty-six read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Twenty-eight read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -40,6 +40,8 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_electric_vehicle_count` | `get_electric_vehicle_count()` | Authenticated `{"count": N}` from upstream `enode_vehicles()` |
 | `get_smart_feed_in_status` | `get_smart_feed_in_status()` | Authenticated, allowlisted boolean enrollment flags |
 | `get_contract_price_resolution_state` | `get_contract_price_resolution_state(connection_id)` | Authenticated, allowlisted contract resolution options |
+| `get_invoice_statistics` | `get_invoice_statistics(year)` | Authenticated annual invoice count, total and average |
+| `get_smart_pv_system_summary` | `get_smart_pv_system_summary(device_id)` | Authenticated, allowlisted PV status and totals |
 | `get_account` | `get_account()` | After a successful authenticated account request, returns only `{"authenticated": true}`; account details are deliberately not exposed |
 | `list_sites` | `list_sites()` | `{"count": N}` for a recognized site collection; site identifiers and addresses are not exposed |
 
@@ -242,6 +244,21 @@ nonempty connection ID, returns `available`, `active_option`,
 upstream state yields `{"available": false}`. Neither endpoint
 returns user IDs, connection IDs or raw upstream account objects.
 No contract-changing API method is exposed.
+
+## Annual invoices and PV status contracts
+
+`get_invoice_statistics(year)` accepts an integer from 2000 through
+2100. It requires credentials and a configured site reference.
+The result contains `year`, `invoice_count`, `total_amount`
+and `average_amount` (null if no invoices qualify). The year is
+determined from each upstream invoice start date converted to the
+Amsterdam timezone. Invoice identifiers and descriptions are excluded.
+
+`get_smart_pv_system_summary(device_id)` requires credentials and
+a nonempty device ID. It returns only `available`,
+`operational_status`, `steering_status`, `total_bonus` and
+`total_result`. Missing upstream summaries return
+`{"available": false}`. Neither method writes upstream state.
 
 ## Authentication and upstream access
 
