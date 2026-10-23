@@ -191,3 +191,27 @@ def test_http_transport_rejects_unsafe_configuration(
     with patch("frank_energie_mcp.server.create_server") as factory, pytest.raises(ValueError):
         main()
     factory.assert_not_called()
+
+
+@pytest.mark.parametrize("transport", ["http", "sse", "unknown"])
+def test_main_rejects_unsupported_transport(
+    monkeypatch: pytest.MonkeyPatch, transport: str
+) -> None:
+    """Do not silently start a different network transport."""
+    from frank_energie_mcp.server import main
+
+    monkeypatch.setenv("FRANK_ENERGIE_MCP_TRANSPORT", transport)
+    with patch("frank_energie_mcp.server.create_server") as factory, pytest.raises(ValueError):
+        main()
+    factory.assert_not_called()
+
+
+def test_main_uses_stdio_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep the default deployment local and without a listening HTTP port."""
+    from frank_energie_mcp.server import main
+
+    monkeypatch.delenv("FRANK_ENERGIE_MCP_TRANSPORT", raising=False)
+    with patch("frank_energie_mcp.server.create_server") as factory:
+        main()
+    factory.assert_called_once_with()
+    factory.return_value.run.assert_called_once_with(transport="stdio")

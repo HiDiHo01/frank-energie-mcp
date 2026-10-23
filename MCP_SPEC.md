@@ -2,43 +2,64 @@
 
 ## Implementation status
 
-The official Python MCP SDK provides the FastMCP stdio runtime. This document distinguishes registered interfaces from fully operational features. The interface is not yet stable.
+The server uses the official Python MCP SDK's FastMCP runtime. Six read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+
+## Transports
+
+`python -m frank_energie_mcp` starts stdio by default. Set `FRANK_ENERGIE_MCP_TRANSPORT=streamable-http` to start Streamable HTTP at `http://127.0.0.1:8000/mcp` by default. The HTTP host must be `127.0.0.1`; `FRANK_ENERGIE_MCP_PORT` must be an integer from 1 to 65535. Unsupported transports are rejected.
+
+The HTTP listener has no application-level inbound authentication. Do not expose it publicly, through port forwarding, or through an unauthenticated proxy or tunnel. The effective SDK origin/DNS-rebinding protections have not been independently verified.
 
 ## Tools
 
-Six asynchronous, argument-free tools are registered:
+All price tools accept an optional `resolution` parameter: `PT15M` (default) or `PT60M`. Other values are rejected by the MCP tool schema.
 
-| Tool | Service operation | Status |
+| Tool | Service operation | Current response |
 | --- | --- | --- |
-| `get_current_prices` | `get_current_prices()` | Returns today's market prices; current interval not isolated |
-| `get_today_prices` | `get_today_prices()` | Calls upstream `prices(today)` |
-| `get_tomorrow_prices` | `get_tomorrow_prices()` | Calls upstream `prices(tomorrow)` |
-| `get_gas_price` | `get_gas_price()` | Returns today's market prices; gas not isolated |
-| `get_account` | `get_account()` | Raises until authentication and site selection are implemented |
-| `list_sites` | `list_sites()` | Calls upstream `UserSites()`; requires authentication |
+| `get_current_prices` | `get_current_prices(resolution)` | Object with `electricity` and `gas` active upstream `current_hour` intervals, each a normalized record or `null` |
+| `get_today_prices` | `get_today_prices(resolution)` | Normalized `electricity` and `gas` interval arrays from `prices(today, resolution=...)` |
+| `get_tomorrow_prices` | `get_tomorrow_prices(resolution)` | Normalized interval arrays from `prices(tomorrow, resolution=...)` |
+| `get_gas_price` | `get_gas_price(resolution)` | Normalized active gas interval or `null` |
+| `get_account` | `get_account()` | After a successful authenticated account request, returns only `{"authenticated": true}`; account details are deliberately not exposed |
+| `list_sites` | `list_sites()` | `{"count": N}` for a recognized site collection; site identifiers and addresses are not exposed |
 
-Dates use the `Europe/Amsterdam` calendar. No tool should fabricate missing price data.
+Today and tomorrow use calendar dates in `Europe/Amsterdam`. The active interval is selected by the upstream `current_hour` property; the MCP layer does not recalculate the price or infer missing intervals.
 
-## Resources and prompts
+## Price response contract
 
-- `frank-energie://capabilities`: registered static, read-only text resource describing capabilities.
-- `summarize_energy_prices`: registered static prompt instructing the client to compare today and tomorrow, preserving units and timestamps.
+`price_schemas.py` defines strict Pydantic `PriceInterval` and `MarketPriceResponse` models. Each returned interval contains only:
 
-Dynamic price/account resources and further prompts remain future work.
+- `date_from`, `date_till`: timezone-aware ISO 8601 timestamps
+- `total`: finite numeric total converted to a float
+- `unit`: optional upstream `per_unit` (preferred) or `unit`
+- `energy_type`: optional upstream energy type
 
-## Upstream contracts
+Intervals must have valid, ordered, timezone-aware timestamps and a finite numeric total. Full-day arrays must be lists with at most 200 entries **per energy type**; other shapes or oversized arrays raise an error. The implementation validates the serialized arrays in Pydantic JSON mode. Unknown upstream fields, including credentials, are excluded by explicit field selection.
 
-All data access is delegated to `python-frank-energie`. Verified upstream method signatures include `prices(start_date: date | None = None, resolution=...)`, `UserSites(site_reference: str | None = None)` and `user(site_reference: str | None = None)`. Account and site operations require authentication; `user()` additionally needs a valid site reference.
+There is no `status/source/data` response envelope. The account and site responses use separate minimal schemas in `server.py`. The current 200-entry limit is an implementation constraint, not a verified upstream contract.
 
-The bridge creates and closes its asynchronous client per request. Do not reimplement GraphQL, price calculations or token renewal in the MCP layer.
+## Authentication and upstream access
 
-## Output and error behavior
+`FrankEnergieLibraryBridge` creates an upstream `python-frank-energie` client per request, optionally logs in, and closes the client in a `finally` block.
 
-The tool handlers currently forward service results. A stable JSON envelope and upstream model serialization have **not** been implemented or validated. The earlier proposed `status/source/data` envelope is a design goal, not current behavior.
+- Public market prices can be requested without credentials.
+- `FRANK_ENERGIE_USERNAME` and `FRANK_ENERGIE_PASSWORD` must be configured together for account/site operations.
+- `get_account` also requires `FRANK_ENERGIE_SITE_REFERENCE`.
+- `get_account` invokes upstream `user(site_reference)`; `list_sites` invokes `UserSites()`.
+- The MCP layer does not implement GraphQL, token persistence, token renewal, or price calculations.
 
-Authentication, transport failures, sensitive-data redaction and MCP-compatible error translation require further implementation and tests.
+## Errors and privacy
 
-## Testing
+Tool handlers wrap service failures in a generic `ToolError("Frank Energie request failed.")` and log only the exception class, not its message. The site response rejects unrecognized structures. The tool boundary intentionally avoids returning raw account and site objects. These controls have unit-test coverage but are not a complete security or production-readiness assessment.
+
+## Resource and prompt
+
+- `frank-energie://capabilities`: static read-only description of available price tools and authentication requirement.
+- `summarize_energy_prices`: static instructions to compare today and tomorrow while preserving units and timestamps and avoiding fabricated data.
+
+No dynamic resources or additional prompts are registered.
+
+## Validation
 
 ```bash
 python -m ruff check .
@@ -47,11 +68,11 @@ python -m mypy src tests
 python -m pytest -q
 ```
 
-Regression tests cover selected upstream method signatures, session cleanup, tool registration and resource/prompt discovery. A real MCP client interoperability test is still required.
+The test suite covers service delegation, upstream call signatures, session cleanup, selected normalization/privacy boundaries, MCP tool registration, and transport configuration. Real-client interoperability, upstream production behavior, authentication lifecycle, HTTP ingress security, and DST boundary scenarios still require validation. Passing CI is required before merging; this document does not assert that the current commit passes.
 
-## Planned improvements
+## Next steps
 
-1. Secure authentication and site-reference selection through the upstream library.
-2. Accurate current-interval and gas-only extraction using verified upstream models.
-3. Deterministic, serializable, privacy-aware MCP response schemas.
-4. End-to-end protocol and failure-path tests.
+1. Verify the upstream interval model, 200-entry bound, and resolution behavior against real supported responses.
+2. Validate end-to-end MCP calls over stdio and loopback Streamable HTTP.
+3. Review authentication lifecycle, client authorization for any external deployment, and error handling.
+4. Align tool names and account/site output contracts with intended client functionality.
