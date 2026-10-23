@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Forty-three read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Forty-four read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -460,3 +460,10 @@ credentials and a configured site reference. It returns `available`,
 contains `unit`, `actualUsage`, `actualAverageUnitPrice`, `actualCosts`,
 `expectedUsage`, `expectedAverageUnitPrice` and `expectedCosts` directly
 from upstream `month_insights()`. No account identifiers are exposed.
+
+## Smart PV operational status
+
+`get_smart_pv_operational_status(device_id)` requires credentials and
+returns `available`, `operational_status`, `steering_status` and
+`operational_status_timestamp` when available. Status strings come from
+the upstream PV summary model. The device ID is not echoed.
