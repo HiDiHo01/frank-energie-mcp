@@ -295,14 +295,21 @@ def _extreme_period(
     step_seconds = step_minutes * 60
     for index in range(len(ordered) - window_size + 1):
         window = ordered[index : index + window_size]
-        starts = [datetime.fromisoformat(entry["date_from"]).astimezone(UTC) for entry in window]
+        starts = [
+            datetime.fromisoformat(entry["date_from"]).astimezone(UTC) for entry in window
+        ]
         ends = [datetime.fromisoformat(entry["date_till"]).astimezone(UTC) for entry in window]
-        if any((end - start).total_seconds() != step_seconds for start, end in zip(starts, ends)):
+        if any(
+            (end - start).total_seconds() != step_seconds
+            for start, end in zip(starts, ends)
+        ):
             continue
         if any(ends[offset] != starts[offset + 1] for offset in range(window_size - 1)):
             continue
         average = sum(entry["total"] for entry in window) / window_size
-        if best is None or (average > best["average_total"] if highest else average < best["average_total"]):
+        if best is None or (
+            average > best["average_total"] if highest else average < best["average_total"]
+        ):
             best = {
                 "start": window[0]["date_from"],
                 "end": window[-1]["date_till"],
