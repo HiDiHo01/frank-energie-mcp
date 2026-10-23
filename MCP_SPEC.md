@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Thirty-nine read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Forty read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -53,6 +53,7 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_smart_battery_fleet_statistics` | `get_smart_battery_fleet_statistics()` | Aggregate linked battery capacity and rated power |
 | `get_electric_vehicle_statistics` | `get_electric_vehicle_statistics()` | Authenticated vehicle reachability and smart charging counts |
 | `get_smart_pv_fleet_statistics` | `get_smart_pv_fleet_statistics()` | Aggregate PV panel group counts and declared capacity |
+| `get_current_month_cost_summary` | `get_current_month_cost_summary()` | Authenticated current-month cost and completeness summary |
 | `get_account` | `get_account()` | After a successful authenticated account request, returns only `{"authenticated": true}`; account details are deliberately not exposed |
 | `list_sites` | `list_sites()` | `{"count": N}` for a recognized site collection; site identifiers and addresses are not exposed |
 
@@ -387,6 +388,16 @@ capacity in kWp. Missing values are excluded; totals with
 no observations are null. Negative and nonfinite values are
 rejected. System IDs, connection identifiers and serial
 numbers are not returned. No upstream mutation is invoked.
+
+## Current month summary contract
+
+`get_current_month_cost_summary()` requires credentials and
+a delivery-site reference, calls upstream `month_summary()`,
+and returns `available`, allowlisted cost totals, expected
+costs per day, meter-reading completeness and `gas_excluded`.
+Absent data returns `available=false`; nonfinite values
+are rejected. User IDs and meter-reading dates are excluded.
+Upstream availability depends on API schema support.
 
 ## Authentication and upstream access
 
