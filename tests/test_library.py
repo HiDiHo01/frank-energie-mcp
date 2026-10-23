@@ -20,7 +20,10 @@ from frank_energie_mcp.server import create_server
 def client() -> AsyncMock:
     """Provide a mocked asynchronous upstream client."""
     instance = AsyncMock()
-    instance.prices.return_value = {"electricity": []}
+    instance.prices.return_value = SimpleNamespace(
+        electricity=SimpleNamespace(price_data=[]),
+        gas=SimpleNamespace(price_data=[]),
+    )
     instance.UserSites.return_value = {"sites": []}
     return instance
 
@@ -36,7 +39,7 @@ async def test_today_prices_uses_single_date(
     service: FrankEnergieService, client: AsyncMock
 ) -> None:
     """Ensure the bridge uses the upstream single-date API."""
-    assert await service.get_today_prices() == {"electricity": []}
+    assert await service.get_today_prices() == {"electricity": [], "gas": []}
     assert isinstance(client.prices.await_args.args[0], date)
     assert len(client.prices.await_args.args) == 1
     assert client.prices.await_args.kwargs == {"resolution": "PT15M"}
@@ -263,3 +266,41 @@ async def test_requested_resolution_reaches_upstream(
     """Forward the requested resolution unchanged to the upstream library."""
     await service.get_today_prices(resolution=resolution)
     assert client.prices.await_args.kwargs == {"resolution": resolution}
+
+
+@pytest.mark.asyncio
+async def test_today_prices_serializes_public_intervals(
+    service: FrankEnergieService, client: AsyncMock
+) -> None:
+    """Normalize upstream intervals to JSON without leaking extra fields."""
+    now = datetime.now(UTC)
+    entry = SimpleNamespace(
+        date_from=now,
+        date_till=now + timedelta(minutes=15),
+        total=0.25,
+        per_unit="kWh",
+        energy_type="electricity",
+        authToken="do-not-expose",
+    )
+    client.prices.return_value = SimpleNamespace(
+        electricity=SimpleNamespace(price_data=[entry]),
+        gas=SimpleNamespace(price_data=[]),
+    )
+    result = await service.get_today_prices()
+    assert result["electricity"][0]["total"] == 0.25
+    assert result["electricity"][0]["unit"] == "kWh"
+    assert datetime.fromisoformat(result["electricity"][0]["date_from"]) == now
+    assert "authToken" not in result["electricity"][0]
+
+
+@pytest.mark.asyncio
+async def test_today_prices_rejects_unbounded_series(
+    service: FrankEnergieService, client: AsyncMock
+) -> None:
+    """Reject unexpectedly large upstream responses before serializing."""
+    client.prices.return_value = SimpleNamespace(
+        electricity=SimpleNamespace(price_data=[None] * 201),
+        gas=SimpleNamespace(price_data=[]),
+    )
+    with pytest.raises(ValueError, match="Invalid market-price series"):
+        await service.get_today_prices()
