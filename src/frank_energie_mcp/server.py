@@ -339,9 +339,7 @@ def create_server(
     @server.tool()
     async def get_monthly_usage_differences(month: str) -> object:
         """Read upstream actual and expected usage differences for a month."""
-        return await safe_tool_call(
-            lambda: energy_service.get_monthly_usage_differences(month)
-        )
+        return await safe_tool_call(lambda: energy_service.get_monthly_usage_differences(month))
 
     @server.tool()
     async def get_monthly_cost_insights(month: str) -> object:
