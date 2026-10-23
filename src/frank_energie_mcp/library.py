@@ -39,6 +39,9 @@ class _AsyncFrankEnergie(Protocol):
     async def UserSites(self) -> Any:  # noqa: N802 - upstream API method name
         """Return authenticated delivery sites."""
 
+    async def meter_readings(self, site_reference: str) -> Any:
+        """Return upstream daily consumption records for a delivery site."""
+
     async def invoices(self, site_reference: str) -> Any:
         """Return invoice data."""
 
@@ -603,6 +606,66 @@ class FrankEnergieService:
             "active_option": active,
             "available_options": options,
             "is_change_request_possible": can_change,
+        }
+
+    async def get_daily_consumption_statistics(
+        self, start_date: date, end_date: date
+    ) -> dict[str, Any]:
+        """Aggregate recorded daily kWh without exposing account identifiers."""
+        self._require_credentials()
+        if not self.bridge.site_reference:
+            raise RuntimeError("Consumption access requires FRANK_ENERGIE_SITE_REFERENCE.")
+        if (
+            not isinstance(start_date, date)
+            or isinstance(start_date, datetime)
+            or not isinstance(end_date, date)
+            or isinstance(end_date, datetime)
+            or end_date < start_date
+            or (end_date - start_date).days > 366
+        ):
+            raise ValueError("Provide an ordered date range of at most 366 days.")
+        async with self.bridge.session() as client:
+            consumption = await client.meter_readings(self.bridge.site_reference)
+        if consumption is None:
+            return {
+                "start_date": start_date.isoformat(),
+                "end_date": end_date.isoformat(),
+                "day_count": 0,
+                "total_kwh": 0.0,
+                "average_daily_kwh": None,
+            }
+        records = getattr(consumption, "daily_consumption", None)
+        if not isinstance(records, list):
+            raise ValueError("Unexpected consumption response structure.")
+        selected: dict[date, float] = {}
+        for record in records:
+            raw_day = getattr(record, "date", None)
+            raw_value = getattr(record, "consumption_kwh", None)
+            if not isinstance(raw_day, str):
+                raise ValueError("Unexpected consumption date.")
+            try:
+                reading_day = date.fromisoformat(raw_day)
+            except ValueError as exc:
+                raise ValueError("Unexpected consumption date.") from exc
+            if reading_day < start_date or reading_day > end_date:
+                continue
+            if (
+                isinstance(raw_value, bool)
+                or not isinstance(raw_value, (int, float))
+                or not isfinite(raw_value)
+                or raw_value < 0
+            ):
+                raise ValueError("Unexpected daily consumption amount.")
+            if reading_day in selected:
+                raise ValueError("Duplicate daily consumption date.")
+            selected[reading_day] = float(raw_value)
+        total = sum(selected.values())
+        return {
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "day_count": len(selected),
+            "total_kwh": total,
+            "average_daily_kwh": total / len(selected) if selected else None,
         }
 
     async def get_invoice_statistics(self, year: int) -> dict[str, Any]:
