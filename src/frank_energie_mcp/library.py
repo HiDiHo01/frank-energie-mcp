@@ -39,6 +39,11 @@ class _AsyncFrankEnergie(Protocol):
     async def UserSites(self) -> Any:  # noqa: N802 - upstream API method name
         """Return authenticated delivery sites."""
 
+    async def period_usage_and_costs(
+        self, site_reference: str, start_date: str
+    ) -> Any:
+        """Return upstream period usage and cost categories."""
+
     async def meter_readings(self, site_reference: str) -> Any:
         """Return upstream daily consumption records for a delivery site."""
 
@@ -611,6 +616,47 @@ class FrankEnergieService:
             "active_option": active,
             "available_options": options,
             "is_change_request_possible": can_change,
+        }
+
+    async def get_period_usage_and_costs(
+        self, start_date: date
+    ) -> dict[str, Any]:
+        """Return non-identifying usage and costs for an upstream billing period."""
+        self._require_credentials()
+        if not self.bridge.site_reference:
+            raise RuntimeError("Period access requires FRANK_ENERGIE_SITE_REFERENCE.")
+        if not isinstance(start_date, date) or isinstance(start_date, datetime):
+            raise ValueError("start_date must be a calendar date.")
+        async with self.bridge.session() as client:
+            period = await client.period_usage_and_costs(
+                self.bridge.site_reference, start_date.isoformat()
+            )
+        if period is None:
+            return {"available": False, "start_date": start_date.isoformat()}
+        categories: dict[str, dict[str, Any] | None] = {}
+        for name in ("electricity", "gas", "feed_in"):
+            category = getattr(period, name, None)
+            if category is None:
+                categories[name] = None
+                continue
+            unit = getattr(category, "unit", None)
+            if not isinstance(unit, str) or not unit:
+                raise ValueError("Unexpected period energy unit.")
+            entry: dict[str, Any] = {"unit": unit}
+            for key in ("usage_total", "costs_total"):
+                value = getattr(category, key, None)
+                if value is not None and (
+                    isinstance(value, bool)
+                    or not isinstance(value, (int, float))
+                    or not isfinite(value)
+                ):
+                    raise ValueError("Unexpected period usage or cost total.")
+                entry[key] = float(value) if value is not None else None
+            categories[name] = entry
+        return {
+            "available": True,
+            "start_date": start_date.isoformat(),
+            "categories": categories,
         }
 
     async def get_daily_consumption_statistics(
