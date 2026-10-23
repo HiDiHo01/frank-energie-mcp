@@ -20,9 +20,7 @@ from frank_energie_mcp.server import create_server
         ("enode_vehicles", "vehicles", "get_electric_vehicle_count"),
     ],
 )
-async def test_linked_device_counts_are_private(
-    method: str, field: str, tool: str
-) -> None:
+async def test_linked_device_counts_are_private(method: str, field: str, tool: str) -> None:
     """Count only; do not expose raw device metadata or identifiers."""
     client = AsyncMock()
     private_device = SimpleNamespace(id="sensitive-device-id", address="private-address")
