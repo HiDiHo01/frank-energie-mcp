@@ -84,6 +84,7 @@ The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol e
 | Tool | `get_smart_battery_session_statistics` | Aggregate trading-session results for one battery and date range. |
 | Tool | `get_period_usage_and_costs` | Read electricity, gas and feed-in usage/cost totals for a billing period. |
 | Tool | `get_ev_charger_statistics` | Count linked EV chargers, reachable devices and smart charging capabilities. |
+| Tool | `get_monthly_cost_insights` | Read expected and actual cost totals for a selected month. |
 | Tool | `get_account` | Requires credentials and a site reference; returns only `{"authenticated": true}` after a successful account request |
 | Tool | `list_sites` | Requires credentials; returns only the number of recognized delivery sites |
 | Resource | `frank-energie://capabilities` | Static description of capabilities |
@@ -431,6 +432,18 @@ location details, interventions, and raw charge settings are
 excluded. This tool requires credentials and
 `FRANK_ENERGIE_SITE_REFERENCE`. It is read-only and does not
 change charging settings.
+
+## Monthly cost insights
+
+`get_monthly_cost_insights(month)` delegates to upstream
+`month_insights(site_reference, month)`. The month is a
+zero-padded `YYYY-MM` string. The tool returns `available`,
+`month`, and allowlisted upstream expected/actual cost totals,
+including gas, electricity, fixed costs and feed-in.
+Missing cost values are null. It excludes invoice IDs,
+account identifiers and meter-reading timestamps. The tool
+requires credentials and `FRANK_ENERGIE_SITE_REFERENCE`,
+and does not modify upstream data.
 
 ## Authentication
 
