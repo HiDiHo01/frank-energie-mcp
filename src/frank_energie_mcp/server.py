@@ -382,7 +382,9 @@ def create_server(
     @server.tool()
     async def get_smart_pv_operational_status(device_id: str) -> object:
         """Read a linked PV system's operational and steering status."""
-        return await safe_tool_call(lambda: energy_service.get_smart_pv_operational_status(device_id))
+        return await safe_tool_call(
+            lambda: energy_service.get_smart_pv_operational_status(device_id)
+        )
 
     @server.tool()
     async def get_smart_pv_financial_result(device_id: str) -> object:
