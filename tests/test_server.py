@@ -62,6 +62,7 @@ async def test_registers_forty_tools() -> None:
         "get_smart_pv_fleet_statistics",
         "get_current_month_cost_summary",
         "get_smart_battery_trading_result",
+        "get_smart_pv_financial_result",
         "get_account",
         "list_sites",
     }
