@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Thirty-five read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Thirty-six read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -49,6 +49,7 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_period_usage_and_costs` | `get_period_usage_and_costs(start_date)` | Authenticated billing-period usage and cost totals by energy category |
 | `get_ev_charger_statistics` | `get_ev_charger_statistics(start_date)` | Authenticated EV charger reachability and smart charging counts |
 | `get_monthly_cost_insights` | `get_monthly_cost_insights(month)` | Authenticated monthly expected and actual cost totals |
+| `get_account_country` | `get_account_country()` | Authenticated two-letter account country code |
 | `get_account` | `get_account()` | After a successful authenticated account request, returns only `{"authenticated": true}`; account details are deliberately not exposed |
 | `list_sites` | `list_sites()` | `{"count": N}` for a recognized site collection; site identifiers and addresses are not exposed |
 
@@ -343,6 +344,15 @@ expected/actual cost fields. Absent upstream data produces
 `available=false`. Nonfinite values are rejected.
 Invoice identifiers, personal metadata and raw model data
 are excluded. This tool is read-only.
+
+## Account country contract
+
+`get_account_country()` requires account credentials and calls
+upstream `user_country()`. It returns exactly one field,
+`country_code`, containing a validated uppercase two-letter
+ASCII code. Invalid or missing codes are rejected. User IDs,
+email addresses and other account details are not returned.
+A site reference is not required. The tool is read-only.
 
 ## Authentication and upstream access
 
