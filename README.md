@@ -76,6 +76,8 @@ The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol e
 | Tool | `get_electric_vehicle_count` | Returns only the number of linked Enode vehicles; requires credentials. |
 | Tool | `get_smart_feed_in_status` | Read-only feed-in enrollment flags, without user IDs. |
 | Tool | `get_contract_price_resolution_state` | Read active and available contract resolution options using a connection ID; does not change settings. |
+| Tool | `get_invoice_statistics` | Aggregates invoice totals for a calendar year; requires credentials and site reference. |
+| Tool | `get_smart_pv_system_summary` | Reads allowlisted operational/steering status and PV totals; requires credentials and device ID. |
 | Tool | `get_account` | Requires credentials and a site reference; returns only `{"authenticated": true}` after a successful account request |
 | Tool | `list_sites` | Requires credentials; returns only the number of recognized delivery sites |
 | Resource | `frank-energie://capabilities` | Static description of capabilities |
@@ -329,6 +331,25 @@ calls the upstream contract change operation.
 
 Both tools require configured Frank Energie credentials. They are
 read-only and use the existing generic error boundary.
+
+## Invoice and solar-system summaries
+
+`get_invoice_statistics(year)` delegates to upstream
+`invoices(site_reference)` and aggregates only invoices whose start
+date falls within the requested `Europe/Amsterdam` calendar year.
+It returns `year`, `invoice_count`, `total_amount` and
+`average_amount` (null when no invoices qualify). It does not
+return invoice IDs, addresses or descriptions. The configured
+`FRANK_ENERGIE_SITE_REFERENCE` is required in addition to credentials.
+Totals are based on upstream invoice amounts and are not a reconstructed
+energy bill.
+
+`get_smart_pv_system_summary(device_id)` delegates to upstream
+`smart_pv_system_summary(device_id)` and returns only
+`available`, `operational_status`, `steering_status`,
+`total_bonus` and `total_result`. It requires credentials and a
+device ID but does not echo the identifier in the response.
+Neither tool performs mutations.
 
 ## Authentication
 
