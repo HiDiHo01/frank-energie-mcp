@@ -60,9 +60,7 @@ async def test_period_usage_costs_absent_and_invalid() -> None:
         "start_date": "2026-10-01",
     }
     client.period_usage_and_costs.return_value = SimpleNamespace(
-        electricity=SimpleNamespace(
-            unit="kWh", usage_total=2.0, costs_total=float("inf")
-        ),
+        electricity=SimpleNamespace(unit="kWh", usage_total=2.0, costs_total=float("inf")),
         gas=None,
         feed_in=None,
     )
@@ -75,9 +73,7 @@ async def test_period_usage_costs_require_site() -> None:
     """Reject calls without a configured delivery-site reference."""
     client = AsyncMock()
     with pytest.raises(RuntimeError, match="SITE_REFERENCE"):
-        await make_service(client, site=None).get_period_usage_and_costs(
-            date(2026, 10, 1)
-        )
+        await make_service(client, site=None).get_period_usage_and_costs(date(2026, 10, 1))
     client.period_usage_and_costs.assert_not_awaited()
 
 
