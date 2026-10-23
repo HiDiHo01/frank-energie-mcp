@@ -83,7 +83,7 @@ class FrankEnergieService:
     async def get_gas_price(self) -> Any:
         """Return gas pricing data."""
         async with self.bridge.session() as client:
-            return await client.prices(date.today(), date.today())
+            return await client.prices(datetime.now(ZoneInfo("Europe/Amsterdam")).date())
 
     async def get_account(self) -> Any:
         """Return the current account data."""
