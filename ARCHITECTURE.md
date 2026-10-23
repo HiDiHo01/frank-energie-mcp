@@ -335,3 +335,9 @@ upstream calculations or expose identifiers.
 Monthly usage differences are read from the upstream `MonthInsights`
 `Difference` objects. The MCP layer only validates and allowlists values;
 it does not independently calculate expected usage, cost or variances.
+
+## PV operational status boundary
+
+The operational status tool delegates to upstream
+`smart_pv_system_summary()` and only exposes status enum values and a
+validated timezone-aware timestamp. No mutations or identifiers.
