@@ -247,6 +247,14 @@ not expose the upstream Me payload, user ID or email. It
 requires credentials but not a site reference and performs
 no mutations.
 
+## Smart battery fleet aggregation
+
+The battery fleet tool delegates to upstream `smart_batteries()`
+and aggregates only validated numeric capacity and rated power.
+It does not expose device identifiers, settings or brands, and
+does not infer unreported capacity. It requires credentials
+and performs no mutations.
+
 ## Authentication and privacy
 
 Public market-price tools work without configured credentials. Account/site operations require `FRANK_ENERGIE_USERNAME` and `FRANK_ENERGIE_PASSWORD`; account operations also require `FRANK_ENERGIE_SITE_REFERENCE`. The bridge reads these from the process environment. Credentials are not passed as MCP tool arguments.
