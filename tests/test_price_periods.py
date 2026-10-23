@@ -42,7 +42,9 @@ async def test_cheapest_and_most_expensive_four_hours(resolution: str, step: int
     start = datetime(2026, 6, 14, 22, tzinfo=UTC)
     per_hour = 60 // step
     entries = [
-        _record(start + timedelta(minutes=i * step), step, 0.1 if i < 4 * per_hour else 0.5)
+        _record(
+            start + timedelta(minutes=i * step), step, 0.1 if i < 4 * per_hour else 0.5
+        )
         for i in range(8 * per_hour)
     ]
     service, client = _service(entries)
@@ -52,7 +54,10 @@ async def test_cheapest_and_most_expensive_four_hours(resolution: str, step: int
     assert high["electricity"]["period"]["average_total"] == pytest.approx(0.5)
     assert low["electricity"]["period"]["interval_count"] == 240 // step
     assert low["electricity"]["period"]["start"] == entries[0].date_from.isoformat()
-    assert high["electricity"]["period"]["start"] == entries[4 * per_hour].date_from.isoformat()
+    assert (
+        high["electricity"]["period"]["start"]
+        == entries[4 * per_hour].date_from.isoformat()
+    )
     assert low["gas"]["period"] is None
     assert client.prices.await_count == 2
 
