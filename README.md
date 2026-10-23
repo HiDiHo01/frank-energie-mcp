@@ -71,6 +71,9 @@ The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol e
 | Tool | `calculate_battery_savings` | Estimates a single idealized battery charge/discharge cycle. |
 | Tool | `get_price_statistics` | Reports mean, median, quartiles and dispersion. |
 | Tool | `get_gas_price` | Returns the current gas interval or `null` when unavailable |
+| Tool | `get_smart_battery_count` | Returns only the number of linked smart batteries; requires credentials. |
+| Tool | `get_smart_pv_system_count` | Returns only the number of linked smart PV systems; requires credentials. |
+| Tool | `get_electric_vehicle_count` | Returns only the number of linked Enode vehicles; requires credentials. |
 | Tool | `get_account` | Requires credentials and a site reference; returns only `{"authenticated": true}` after a successful account request |
 | Tool | `list_sites` | Requires credentials; returns only the number of recognized delivery sites |
 | Resource | `frank-energie://capabilities` | Static description of capabilities |
@@ -281,6 +284,30 @@ electricity and gas results except negative-price periods, which apply
 only to electricity. Empty data returns null statistics; trend results
 also report whether any gaps exist. Comparison statistics describe
 available intervals, not guaranteed complete-day coverage.
+
+## Linked-device tools from the upstream API
+
+The upstream `python-frank-energie` client exposes
+`smart_batteries()`, `smart_pv_systems()` and `enode_vehicles()`.
+Three read-only MCP tools wrap these methods and return only
+`{"count": N}`. No device IDs, addresses, charging settings, or
+other identifying metadata are returned.
+
+- `get_smart_battery_count`: linked smart battery count.
+- `get_smart_pv_system_count`: linked solar PV system count.
+- `get_electric_vehicle_count`: linked Enode electric vehicle count.
+
+All three require `FRANK_ENERGIE_USERNAME` and
+`FRANK_ENERGIE_PASSWORD` in the server environment. Some upstream
+services also require smart-trading or smart-charging enrollment.
+A count of zero does not establish that the account is eligible for
+a particular feature. API failures are returned as generic MCP errors.
+
+Other upstream capabilities inspected include invoices, meter readings,
+month insights, customer-specific prices, contract price resolution,
+battery sessions, solar summaries and charging controls. These are
+not exposed here because they require additional privacy, input and
+write-action policy design. The three new tools perform no mutations.
 
 ## Authentication
 
