@@ -183,6 +183,14 @@ capacity. Device identifiers, trading configuration and raw
 upstream models are never returned. Credentials are required,
 and no upstream mutation is exposed.
 
+## Smart HVAC status boundary
+
+The service delegates to upstream `smart_hvac_status()` in an
+authenticated managed session. It allowlists two nullable boolean
+flags and a derived availability flag. User IDs, registration
+timestamps and the raw upstream object are excluded. The MCP server
+does not expose smart HVAC setting mutations.
+
 ## Authentication and privacy
 
 Public market-price tools work without configured credentials. Account/site operations require `FRANK_ENERGIE_USERNAME` and `FRANK_ENERGIE_PASSWORD`; account operations also require `FRANK_ENERGIE_SITE_REFERENCE`. The bridge reads these from the process environment. Credentials are not passed as MCP tool arguments.
