@@ -130,6 +130,20 @@ independent upstream day requests. Population standard deviation and
 linear interpolation for quartiles are documented API semantics;
 adjacent-change metrics never bridge missing intervals.
 
+## Shared analytics contracts
+
+The service fetches public upstream price data, normalizes it using
+`price_schemas.py`, and delegates pure computations to `optimization.py`.
+The common validated series checks chronological intervals, local-day
+boundaries, resolution lengths and overlaps. Price statistics, volatility,
+trends, threshold grouping, contiguous windows and split-block selection
+reuse that representation. Day comparison requests two dates independently.
+
+The split-block algorithm is greedy rather than globally optimal for
+general scheduling constraints. The battery estimate models only one
+idealized charge-before-discharge cycle. Neither tool guarantees actual
+bill savings or accounts for a household consumption profile.
+
 ## Authentication and privacy
 
 Public market-price tools work without configured credentials. Account/site operations require `FRANK_ENERGIE_USERNAME` and `FRANK_ENERGIE_PASSWORD`; account operations also require `FRANK_ENERGIE_SITE_REFERENCE`. The bridge reads these from the process environment. Credentials are not passed as MCP tool arguments.
@@ -153,7 +167,7 @@ The default runtime is stdio. Optional Streamable HTTP binds only to `127.0.0.1`
 
 - `get_lowest_price` and `get_highest_price` select minimum and maximum normalized total-price intervals using the shared coverage validation.
 - `get_average_prices` calculates the arithmetic mean of normalized `total` values over all returned intervals; it reports missing coverage and does not impute missing prices.
-- `The minimal `get_account` response indicates success only; it is not an account summary.
+- The minimal `get_account` response indicates success only; it is not an account summary.
 - Site discovery returns a count, not selectable site details.
 - No persistent login/token lifecycle is implemented in this MCP layer.
 - The 200-interval cap is a defensive MCP bound; live upstream response behavior still needs verification.
