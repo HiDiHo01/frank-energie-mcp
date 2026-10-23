@@ -56,7 +56,9 @@ async def test_trading_result_auth_and_id_validation() -> None:
     """Reject unauthenticated or blank device requests."""
     client = AsyncMock()
     with pytest.raises(RuntimeError, match="credentials"):
-        await make_service(client, authenticated=False).get_smart_battery_trading_result("device")
+        await make_service(client, authenticated=False).get_smart_battery_trading_result(
+            "device"
+        )
     with pytest.raises(ValueError, match="device_id"):
         await make_service(client).get_smart_battery_trading_result(" ")
     client.smart_battery_details.assert_not_awaited()
