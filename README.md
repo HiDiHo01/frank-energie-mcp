@@ -80,6 +80,7 @@ The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol e
 | Tool | `get_smart_pv_system_summary` | Reads allowlisted operational/steering status and PV totals; requires credentials and device ID. |
 | Tool | `get_smart_battery_status` | Read a linked battery's state of charge, status, update time and capacity. |
 | Tool | `get_smart_hvac_status` | Read smart HVAC activation and country availability without personal data. |
+| Tool | `get_daily_consumption_statistics` | Aggregate recorded daily consumption (kWh) over an inclusive date range. |
 | Tool | `get_account` | Requires credentials and a site reference; returns only `{"authenticated": true}` after a successful account request |
 | Tool | `list_sites` | Requires credentials; returns only the number of recognized delivery sites |
 | Resource | `frank-energie://capabilities` | Static description of capabilities |
@@ -373,6 +374,21 @@ enrollment is returned, `available` is false and the flags are null.
 An existing enrollment can also contain nullable flags. User IDs and
 registration timestamps are never included. The tool is read-only and
 does not change HVAC settings.
+
+## Daily consumption statistics
+
+`get_daily_consumption_statistics(start_date, end_date)` calls the
+authenticated upstream `meter_readings(site_reference)` API.
+Both dates use ISO `YYYY-MM-DD` format, are inclusive, and must
+form an ordered range of no more than 366 days. The result contains
+`start_date`, `end_date`, `day_count`, `total_kwh` and
+`average_daily_kwh` (null when no readings are available).
+Only days with upstream readings contribute to the average; missing
+days are not treated as zero. Duplicate dates, negative/nonfinite
+values and malformed upstream records are rejected. No raw meter
+readings, user IDs or site references are returned. This tool
+requires credentials and `FRANK_ENERGIE_SITE_REFERENCE` and
+does not modify upstream data.
 
 ## Authentication
 
