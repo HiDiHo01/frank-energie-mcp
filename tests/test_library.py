@@ -95,6 +95,7 @@ async def test_server_registers_tools_resources_and_prompts(
         "get_contract_price_resolution_state",
         "get_invoice_statistics",
         "get_smart_pv_system_summary",
+        "get_smart_battery_status",
         "get_account",
         "list_sites",
     }
