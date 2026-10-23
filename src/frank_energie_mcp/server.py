@@ -114,6 +114,32 @@ def create_server(
         )
 
     @server.tool()
+    async def get_lowest_period(
+        period_minutes: int,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Find the lowest average total-price consecutive period, e.g. 240 minutes."""
+        return await safe_tool_call(
+            lambda: energy_service.get_lowest_period(
+                period_minutes=period_minutes, day=day, resolution=resolution
+            )
+        )
+
+    @server.tool()
+    async def get_highest_period(
+        period_minutes: int,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Find the highest average total-price consecutive period, e.g. 240 minutes."""
+        return await safe_tool_call(
+            lambda: energy_service.get_highest_period(
+                period_minutes=period_minutes, day=day, resolution=resolution
+            )
+        )
+
+    @server.tool()
     async def get_gas_price(resolution: PriceResolution = "PT15M") -> object:
         """Get today's pricing data including gas prices."""
         return await safe_tool_call(lambda: energy_service.get_gas_price(resolution=resolution))
@@ -139,7 +165,8 @@ def create_server(
         return (
             "Read-only Frank Energie market prices are available through "
             "get_current_prices, get_today_prices, get_tomorrow_prices, "
-            "get_average_prices, get_lowest_price, get_highest_price, and get_gas_price. "
+            "get_average_prices, get_lowest_price, get_highest_price, "
+            "get_lowest_period, get_highest_period, and get_gas_price. "
             "Account access requires authentication."
         )
 
