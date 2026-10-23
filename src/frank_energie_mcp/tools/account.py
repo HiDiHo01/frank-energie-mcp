@@ -16,8 +16,6 @@ class AccountResult:
     message: str
     source: str = "python-frank-energie"
 
-
-
 def _extract_account_payload(data: Any) -> AccountResult:
     """Convert library data into the MCP response model.
 
