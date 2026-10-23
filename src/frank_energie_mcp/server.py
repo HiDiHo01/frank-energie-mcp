@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Awaitable, Callable
-from typing import TypeVar
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
@@ -12,11 +11,10 @@ from mcp.server.fastmcp.exceptions import ToolError
 from .library import FrankEnergieService, default_service
 
 SERVER_NAME = "frank-energie-mcp"
-_Result = TypeVar("_Result")
 _LOGGER = logging.getLogger(__name__)
 
 
-async def safe_tool_call(operation: Callable[[], Awaitable[_Result]]) -> _Result:
+async def safe_tool_call[T](operation: Callable[[], Awaitable[T]]) -> T:
     """Hide upstream exception details from MCP clients."""
     try:
         return await operation()
