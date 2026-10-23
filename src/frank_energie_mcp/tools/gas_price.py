@@ -18,7 +18,6 @@ class GasPriceResult:
     source: str = "python-frank-energie"
 
 
-
 def _extract_gas_price_payload(data: Any) -> GasPriceResult:
     """Convert library data into the MCP response model.
 

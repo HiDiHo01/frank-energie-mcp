@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+import os
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import date, timedelta
-from typing import Any, Protocol, cast
+from datetime import date, datetime, timedelta
+from typing import Any, Literal, Protocol, cast
+from zoneinfo import ZoneInfo
+
+PriceResolution = Literal["PT15M", "PT60M"]
 
 
 class _AsyncFrankEnergie(Protocol):
@@ -15,8 +19,11 @@ class _AsyncFrankEnergie(Protocol):
     async def login(self, username: str, password: str) -> Any:
         """Authenticate with Frank Energie."""
 
-    async def user(self) -> Any:
+    async def user(self, site_reference: str | None = None) -> Any:
         """Return the current user data."""
+
+    async def UserSites(self) -> Any:  # noqa: N802 - upstream API method name
+        """Return authenticated delivery sites."""
 
     async def invoices(self) -> Any:
         """Return invoice data."""
@@ -24,7 +31,9 @@ class _AsyncFrankEnergie(Protocol):
     async def month_summary(self) -> Any:
         """Return the month summary."""
 
-    async def prices(self, start_date: date, end_date: date) -> Any:
+    async def prices(
+        self, start_date: date | None = None, resolution: PriceResolution = "PT15M"
+    ) -> Any:
         """Return prices for the requested date range."""
 
     async def user_prices(self, start_date: date, end_date: date | None = None) -> Any:
@@ -43,12 +52,17 @@ class FrankEnergieLibraryBridge:
     """
 
     factory: Callable[[], _AsyncFrankEnergie]
+    username: str | None = None
+    password: str | None = None
+    site_reference: str | None = None
 
     @asynccontextmanager
-    async def session(self):
+    async def session(self) -> AsyncIterator[_AsyncFrankEnergie]:
         """Create a managed Frank Energie client session."""
         client = self.factory()
         try:
+            if self.username is not None and self.password is not None:
+                await client.login(self.username, self.password)
             yield client
         finally:
             await client.close()
@@ -60,37 +74,67 @@ class FrankEnergieService:
 
     bridge: FrankEnergieLibraryBridge
 
-    async def get_current_prices(self) -> Any:
-        """Return current prices for today."""
+    async def get_current_prices(self, resolution: PriceResolution = "PT15M") -> dict[str, Any]:
+        """Return the currently applicable upstream electricity and gas records."""
         async with self.bridge.session() as client:
-            return await client.prices(date.today(), date.today())
+            prices = await client.prices(
+                datetime.now(ZoneInfo("Europe/Amsterdam")).date(), resolution=resolution
+            )
+        return {
+            "electricity": _current_price(prices.electricity),
+            "gas": _current_price(prices.gas),
+        }
 
-    async def get_today_prices(self) -> Any:
+    async def get_today_prices(self, resolution: PriceResolution = "PT15M") -> Any:
         """Return today's prices."""
         async with self.bridge.session() as client:
-            return await client.prices(date.today(), date.today())
+            return await client.prices(
+                datetime.now(ZoneInfo("Europe/Amsterdam")).date(), resolution=resolution
+            )
 
-    async def get_tomorrow_prices(self) -> Any:
+    async def get_tomorrow_prices(self, resolution: PriceResolution = "PT15M") -> Any:
         """Return tomorrow's prices."""
-        tomorrow = date.today() + timedelta(days=1)
+        tomorrow = datetime.now(ZoneInfo("Europe/Amsterdam")).date() + timedelta(days=1)
         async with self.bridge.session() as client:
-            return await client.prices(tomorrow, tomorrow)
+            return await client.prices(tomorrow, resolution=resolution)
 
-    async def get_gas_price(self) -> Any:
-        """Return gas pricing data."""
+    async def get_gas_price(self, resolution: PriceResolution = "PT15M") -> dict[str, Any] | None:
+        """Return the currently applicable gas price, or None if unavailable."""
         async with self.bridge.session() as client:
-            return await client.prices(date.today(), date.today())
+            prices = await client.prices(
+                datetime.now(ZoneInfo("Europe/Amsterdam")).date(), resolution=resolution
+            )
+        return _current_price(prices.gas)
 
     async def get_account(self) -> Any:
-        """Return the current account data."""
+        """Return account data for the configured delivery site."""
+        if not self.bridge.site_reference:
+            raise RuntimeError("Account access requires FRANK_ENERGIE_SITE_REFERENCE.")
+        if not self.bridge.username or not self.bridge.password:
+            raise RuntimeError("Account access requires Frank Energie credentials.")
         async with self.bridge.session() as client:
-            return await client.user()
+            return await client.user(self.bridge.site_reference)
 
     async def list_sites(self) -> Any:
         """Return the available sites."""
+        if not self.bridge.username or not self.bridge.password:
+            raise RuntimeError("Site access requires Frank Energie credentials.")
         async with self.bridge.session() as client:
-            return await client.user()
+            return await client.UserSites()
 
+
+def _current_price(series: Any) -> dict[str, Any] | None:
+    """Return the active upstream interval as a JSON-compatible record."""
+    price = series.current_hour
+    if price is None:
+        return None
+    return {
+        "date_from": price.date_from.isoformat(),
+        "date_till": price.date_till.isoformat(),
+        "total": price.total,
+        "unit": getattr(price, "per_unit", None) or price.unit,
+        "energy_type": price.energy_type,
+    }
 
 
 def default_library_bridge() -> FrankEnergieLibraryBridge:
@@ -105,8 +149,16 @@ def default_library_bridge() -> FrankEnergieLibraryBridge:
 
         return cast(_AsyncFrankEnergie, FrankEnergie())
 
-    return FrankEnergieLibraryBridge(factory=_factory)
-
+    username = os.environ.get("FRANK_ENERGIE_USERNAME") or None
+    password = os.environ.get("FRANK_ENERGIE_PASSWORD") or None
+    if (username is None) != (password is None):
+        raise ValueError("Both FRANK_ENERGIE_USERNAME and FRANK_ENERGIE_PASSWORD are required.")
+    return FrankEnergieLibraryBridge(
+        factory=_factory,
+        username=username,
+        password=password,
+        site_reference=os.environ.get("FRANK_ENERGIE_SITE_REFERENCE") or None,
+    )
 
 
 def default_service() -> FrankEnergieService:
