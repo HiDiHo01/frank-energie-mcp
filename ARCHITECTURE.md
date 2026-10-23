@@ -272,6 +272,15 @@ does not serialize connection EANs, inverter serial numbers
 or device identifiers. It requires credentials and is
 read-only.
 
+## Current month summary boundary
+
+The current month summary tool delegates to upstream
+`month_summary(site_reference)` and allowlists numeric
+cost and completeness fields plus the gas-exclusion flag.
+It excludes account IDs and meter-reading dates. It does
+not duplicate the upstream billing calculations or make
+changes to the account. Upstream schema support is required.
+
 ## Authentication and privacy
 
 Public market-price tools work without configured credentials. Account/site operations require `FRANK_ENERGIE_USERNAME` and `FRANK_ENERGIE_PASSWORD`; account operations also require `FRANK_ENERGIE_SITE_REFERENCE`. The bridge reads these from the process environment. Credentials are not passed as MCP tool arguments.
