@@ -94,8 +94,6 @@ async def test_mcp_tools_delegate() -> None:
     mock = AsyncMock()
     server = create_server(mock)
     await server.call_tool("get_smart_feed_in_status", {})
-    await server.call_tool(
-        "get_contract_price_resolution_state", {"connection_id": "connection"}
-    )
+    await server.call_tool("get_contract_price_resolution_state", {"connection_id": "connection"})
     mock.get_smart_feed_in_status.assert_awaited_once()
     mock.get_contract_price_resolution_state.assert_awaited_once_with("connection")
