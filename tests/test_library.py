@@ -83,6 +83,11 @@ async def test_server_registers_tools_resources_and_prompts(
         "get_price_threshold_periods",
         "get_best_split_periods",
         "calculate_battery_savings",
+        "get_negative_price_periods",
+        "get_price_trend",
+        "get_price_volatility",
+        "compare_days",
+        "get_price_statistics",
         "get_account",
         "list_sites",
     }
