@@ -584,6 +584,7 @@ class FrankEnergieService:
         self._require_credentials()
         async with self.bridge.session() as client:
             data = await client.smart_pv_systems()
+        systems: list[Any]
         if data is None:
             systems = []
         else:
@@ -799,9 +800,9 @@ class FrankEnergieService:
             enabled = getattr(settings, "is_smart_charging_enabled", None)
             if any(type(value) is not bool for value in (reachable, capable, enabled)):
                 raise ValueError("Unexpected EV charger capability flags.")
-            reachable_count += int(reachable)
-            smart_capable_count += int(capable)
-            smart_enabled_count += int(enabled)
+            reachable_count += int(reachable is True)
+            smart_capable_count += int(capable is True)
+            smart_enabled_count += int(enabled is True)
         return {
             "charger_count": len(chargers),
             "reachable_count": reachable_count,
