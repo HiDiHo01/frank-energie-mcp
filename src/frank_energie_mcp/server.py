@@ -294,6 +294,11 @@ def create_server(
         return await safe_tool_call(energy_service.get_electric_vehicle_count)
 
     @server.tool()
+    async def get_smart_hvac_status() -> object:
+        """Read smart HVAC activation and country availability without user data."""
+        return await safe_tool_call(energy_service.get_smart_hvac_status)
+
+    @server.tool()
     async def get_smart_feed_in_status() -> object:
         """Read privacy-filtered smart feed-in enrollment status."""
         return await safe_tool_call(energy_service.get_smart_feed_in_status)
