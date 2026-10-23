@@ -74,6 +74,8 @@ async def test_server_registers_tools_resources_and_prompts(
         "get_tomorrow_prices",
         "get_gas_price",
         "get_average_prices",
+        "get_lowest_price",
+        "get_highest_price",
         "get_account",
         "list_sites",
     }
