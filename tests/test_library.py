@@ -108,6 +108,7 @@ async def test_server_registers_tools_resources_and_prompts(
         "get_smart_pv_fleet_statistics",
         "get_current_month_cost_summary",
         "get_smart_battery_trading_result",
+        "get_smart_pv_financial_result",
         "get_account",
         "list_sites",
     }
