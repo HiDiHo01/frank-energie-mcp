@@ -52,7 +52,10 @@ async def test_cheapest_and_most_expensive_four_hours(resolution: str, step: int
     assert high["electricity"]["period"]["average_total"] == pytest.approx(0.5)
     assert low["electricity"]["period"]["interval_count"] == 240 // step
     assert datetime.fromisoformat(low["electricity"]["period"]["start"]) == entries[0].date_from
-    assert datetime.fromisoformat(high["electricity"]["period"]["start"]) == entries[4 * per_hour].date_from
+    assert (
+        datetime.fromisoformat(high["electricity"]["period"]["start"])
+        == entries[4 * per_hour].date_from
+    )
     assert low["gas"]["period"] is None
     assert client.prices.await_count == 2
 
