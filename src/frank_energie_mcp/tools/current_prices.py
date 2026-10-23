@@ -17,6 +17,7 @@ class CurrentPricesResult:
     message: str
     source: str = "python-frank-energie"
 
+
 def _extract_current_prices_payload(data: Any) -> CurrentPricesResult:
     """Convert library data into the MCP response model.
 
