@@ -86,6 +86,7 @@ The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol e
 | Tool | `get_ev_charger_statistics` | Count linked EV chargers, reachable devices and smart charging capabilities. |
 | Tool | `get_monthly_cost_insights` | Read expected and actual cost totals for a selected month. |
 | Tool | `get_account_country` | Read the authenticated account's two-letter country code. |
+| Tool | `get_smart_battery_fleet_statistics` | Aggregate linked battery capacity and rated charge/discharge power. |
 | Tool | `get_account` | Requires credentials and a site reference; returns only `{"authenticated": true}` after a successful account request |
 | Tool | `list_sites` | Requires credentials; returns only the number of recognized delivery sites |
 | Resource | `frank-energie://capabilities` | Static description of capabilities |
@@ -454,6 +455,18 @@ two-letter country code such as `NL`. It requires Frank Energie
 credentials but not a delivery-site reference. It excludes user
 IDs, email addresses and other account metadata. This operation
 is read-only.
+
+## Smart battery fleet statistics
+
+`get_smart_battery_fleet_statistics()` calls upstream
+`smart_batteries()` and returns `battery_count`,
+`capacity_reported_count`, `total_capacity_kwh`,
+`total_max_charge_power`, and `total_max_discharge_power`.
+Missing capacity or power values are excluded from their totals;
+when no values are reported, the total is null rather than zero.
+Power totals retain the upstream units; they are not converted
+or assumed to be kW. Device IDs, brands and settings are omitted.
+The tool requires credentials and is read-only.
 
 ## Authentication
 
