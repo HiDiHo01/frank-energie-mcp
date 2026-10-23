@@ -56,13 +56,13 @@ The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol e
 | Tool | `get_current_prices` | Returns current electricity and gas intervals via upstream `current_hour` |
 | Tool | `get_today_prices` | Fetches today's market prices |
 | Tool | `get_tomorrow_prices` | Fetches tomorrow's market prices |
-| Tool | `get_gas_price` | Returns the current gas interval or `null` when unavailable |
+| Tool | `get_average_prices` | Averages available normalized `total` prices for electricity and gas for an optional Amsterdam calendar date and `PT15M`/`PT60M` resolution; reports interval count, first/last timestamps, coverage seconds, and completion status. |\n| Tool | `get_gas_price` | Returns the current gas interval or `null` when unavailable |
 | Tool | `get_account` | Not operational; authentication and site reference are missing |
 | Tool | `list_sites` | Delegates to upstream `UserSites()`; authentication required |
 | Resource | `frank-energie://capabilities` | Static description of capabilities |
 | Prompt | `summarize_energy_prices` | Static instructions for comparing prices |
 
-Price requests use the `Europe/Amsterdam` calendar date. Tool output is not yet guaranteed to follow a stable normalized JSON schema.
+Price requests use the `Europe/Amsterdam` calendar date. Price tools use the bounded, privacy-safe JSON schema documented in MCP_SPEC.md.
 
 ## Authentication
 
