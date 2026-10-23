@@ -56,7 +56,9 @@ The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol e
 | Tool | `get_current_prices` | Returns current electricity and gas intervals via upstream `current_hour` |
 | Tool | `get_today_prices` | Fetches today's market prices |
 | Tool | `get_tomorrow_prices` | Fetches tomorrow's market prices |
-| Tool | `get_average_prices` | Averages available normalized `total` prices for electricity and gas for an optional Amsterdam calendar date and `PT15M`/`PT60M` resolution; reports interval count, first/last timestamps, coverage seconds, and completion status. |\n| Tool | `get_gas_price` | Returns the current gas interval or `null` when unavailable |
+| Tool | `get_average_prices` | Averages available normalized `total` prices for electricity and gas for an optional Amsterdam calendar date and `PT15M`/`PT60M` resolution; reports interval count, first/last timestamps, coverage seconds, and completion status. |\n| Tool | `get_lowest_price` | Lowest available normalized total interval per energy type, with coverage status. |
+| Tool | `get_highest_price` | Highest available normalized total interval per energy type, with coverage status. |
+| Tool | `get_gas_price` | Returns the current gas interval or `null` when unavailable |
 | Tool | `get_account` | Not operational; authentication and site reference are missing |
 | Tool | `list_sites` | Delegates to upstream `UserSites()`; authentication required |
 | Resource | `frank-energie://capabilities` | Static description of capabilities |
