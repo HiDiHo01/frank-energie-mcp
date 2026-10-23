@@ -294,6 +294,11 @@ def create_server(
         return await safe_tool_call(energy_service.get_smart_pv_system_count)
 
     @server.tool()
+    async def get_electric_vehicle_statistics() -> object:
+        """Count linked vehicles, reachable vehicles and smart charging states."""
+        return await safe_tool_call(energy_service.get_electric_vehicle_statistics)
+
+    @server.tool()
     async def get_electric_vehicle_count() -> object:
         """Count linked electric vehicles without returning device identifiers."""
         return await safe_tool_call(energy_service.get_electric_vehicle_count)
