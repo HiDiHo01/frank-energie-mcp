@@ -248,9 +248,7 @@ def create_server(
         resolution: PriceResolution = "PT15M",
     ) -> object:
         """Return daily spread and consecutive price changes."""
-        return await safe_tool_call(
-            lambda: energy_service.get_price_volatility(day, resolution)
-        )
+        return await safe_tool_call(lambda: energy_service.get_price_volatility(day, resolution))
 
     @server.tool()
     async def get_price_statistics(
@@ -258,9 +256,7 @@ def create_server(
         resolution: PriceResolution = "PT15M",
     ) -> object:
         """Return daily price percentiles and descriptive statistics."""
-        return await safe_tool_call(
-            lambda: energy_service.get_price_statistics(day, resolution)
-        )
+        return await safe_tool_call(lambda: energy_service.get_price_statistics(day, resolution))
 
     @server.tool()
     async def compare_days(
@@ -328,9 +324,7 @@ def create_server(
     @server.tool()
     async def get_ev_charger_statistics(start_date: date) -> object:
         """Count EV chargers, reachability and smart charging capabilities."""
-        return await safe_tool_call(
-            lambda: energy_service.get_ev_charger_statistics(start_date)
-        )
+        return await safe_tool_call(lambda: energy_service.get_ev_charger_statistics(start_date))
 
     @server.tool()
     async def get_account_country() -> object:
@@ -375,9 +369,7 @@ def create_server(
     @server.tool()
     async def get_smart_pv_system_summary(device_id: str) -> object:
         """Read allowlisted PV system status and totals without identifiers."""
-        return await safe_tool_call(
-            lambda: energy_service.get_smart_pv_system_summary(device_id)
-        )
+        return await safe_tool_call(lambda: energy_service.get_smart_pv_system_summary(device_id))
 
     @server.tool()
     async def get_smart_battery_session_statistics(
@@ -393,9 +385,7 @@ def create_server(
     @server.tool()
     async def get_smart_battery_status(device_id: str) -> object:
         """Read state of charge, status and capacity of one linked battery."""
-        return await safe_tool_call(
-            lambda: energy_service.get_smart_battery_status(device_id)
-        )
+        return await safe_tool_call(lambda: energy_service.get_smart_battery_status(device_id))
 
     @server.tool()
     async def get_account() -> object:
