@@ -75,3 +75,29 @@ async def test_mcp_error_never_exposes_upstream_secrets(
     for sensitive in (secret, password, customer):
         assert sensitive not in rendered
     assert "Frank Energie request failed" in rendered
+
+
+@pytest.mark.asyncio
+async def test_upstream_error_does_not_leak_into_logs(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Never log raw upstream exception text, credentials or personal data."""
+    secret = "fake-token-DO-NOT-EXPOSE"
+    password = "fake-password-DO-NOT-EXPOSE"
+    customer = "customer@example.invalid"
+    service = AsyncMock()
+    service.get_account.side_effect = ValueError(
+        f"token={secret} password={password} email={customer}"
+    )
+    server = create_server(service)
+
+    with caplog.at_level(logging.WARNING, logger="frank_energie_mcp.server"):
+        try:
+            await server.call_tool("get_account", {})
+        except Exception:
+            pass
+
+    output = caplog.text
+    assert "category=ValueError" in output
+    for sensitive in (secret, password, customer):
+        assert sensitive not in output
