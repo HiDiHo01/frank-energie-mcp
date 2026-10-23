@@ -36,7 +36,7 @@ Today and tomorrow use calendar dates in `Europe/Amsterdam`. The active interval
 
 Intervals must have valid, ordered, timezone-aware timestamps and a finite numeric total. Full-day arrays must be lists with at most 200 entries **per energy type**; other shapes or oversized arrays raise an error. The implementation validates the serialized arrays in Pydantic JSON mode. Unknown upstream fields, including credentials, are excluded by explicit field selection.
 
-There is no `status/source/data` response envelope. The account and site responses use separate minimal schemas in `server.py`. The current 200-entry limit is an implementation constraint, not a verified upstream contract.
+There is no `status/source/data` response envelope. The account and site responses use separate minimal schemas in `server.py`. The 200-entry limit is a **defensive MCP response-size bound**, not an upstream API contract. Upstream `PriceResolution` supports `PT15M` and `PT60M`; for complete Europe/Amsterdam calendar days these imply 92/96/100 or 23/24/25 intervals respectively (spring DST/normal/autumn DST). Actual API responses may be incomplete, so these counts are not enforced. The 200-entry cap intentionally leaves headroom beyond a full day while rejecting unexpectedly large series.
 
 ## Authentication and upstream access
 
@@ -68,11 +68,11 @@ python -m mypy src tests
 python -m pytest -q
 ```
 
-The test suite covers service delegation, upstream call signatures, session cleanup, selected normalization/privacy boundaries, MCP tool registration, and transport configuration. Real-client interoperability, upstream production behavior, authentication lifecycle, HTTP ingress security, and DST boundary scenarios still require validation. Passing CI is required before merging; this document does not assert that the current commit passes.
+The test suite covers service delegation, upstream call signatures, session cleanup, selected normalization/privacy boundaries, MCP tool registration, and transport configuration. Synthetic regression tests cover 23-, 24-, and 25-hour Amsterdam days at both supported resolutions. Real-client interoperability, upstream production behavior, authentication lifecycle, and HTTP ingress security still require validation. Passing CI is required before merging; this document does not assert that the current commit passes.
 
 ## Next steps
 
-1. Verify the upstream interval model, 200-entry bound, and resolution behavior against real supported responses.
+1. Validate live upstream interval behavior; the 200-entry MCP limit is intentionally independent of the upstream contract.
 2. Validate end-to-end MCP calls over stdio and loopback Streamable HTTP.
 3. Review authentication lifecycle, client authorization for any external deployment, and error handling.
 4. Align tool names and account/site output contracts with intended client functionality.
