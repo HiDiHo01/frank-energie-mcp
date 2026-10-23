@@ -28,9 +28,7 @@ async def test_battery_status_is_allowlisted() -> None:
     """Do not return device identifiers or trading settings."""
     client = AsyncMock()
     client.smart_battery_details.return_value = SimpleNamespace(
-        smart_battery=SimpleNamespace(
-            id="private-id", capacity=5.0, settings={"private": True}
-        ),
+        smart_battery=SimpleNamespace(id="private-id", capacity=5.0, settings={"private": True}),
         smart_battery_summary=SimpleNamespace(
             last_known_state_of_charge=72,
             last_known_status="CHARGING",
