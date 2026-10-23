@@ -279,6 +279,21 @@ def create_server(
         return await safe_tool_call(lambda: energy_service.get_gas_price(resolution=resolution))
 
     @server.tool()
+    async def get_smart_battery_count() -> object:
+        """Count linked smart batteries without returning device identifiers."""
+        return await safe_tool_call(energy_service.get_smart_battery_count)
+
+    @server.tool()
+    async def get_smart_pv_system_count() -> object:
+        """Count linked smart solar PV systems without returning device identifiers."""
+        return await safe_tool_call(energy_service.get_smart_pv_system_count)
+
+    @server.tool()
+    async def get_electric_vehicle_count() -> object:
+        """Count linked electric vehicles without returning device identifiers."""
+        return await safe_tool_call(energy_service.get_electric_vehicle_count)
+
+    @server.tool()
     async def get_account() -> object:
         """Get the authenticated account information."""
         await safe_tool_call(energy_service.get_account)
@@ -303,7 +318,9 @@ def create_server(
             "get_lowest_period, get_highest_period, get_best_start_time, "
             "calculate_energy_cost, get_price_threshold_periods, "
             "get_best_split_periods, calculate_battery_savings, and get_gas_price. "
-            "Account access requires authentication."
+            "Authenticated device counts are available through "
+            "get_smart_battery_count, get_smart_pv_system_count, and "
+            "get_electric_vehicle_count. Account access requires authentication."
         )
 
     @server.prompt()
