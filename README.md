@@ -130,6 +130,32 @@ filled. The search uses the entire requested calendar day and does not
 restrict today's result to future intervals. Equal averages prefer the
 earliest window. See [MCP_SPEC.md](MCP_SPEC.md).
 
+## Optimization tools
+
+Five additional read-only tools use normalized public `total` prices:
+
+| Tool | Parameters | Result |
+| --- | --- | --- |
+| `get_best_start_time` | `duration_minutes`, optional `day`, `resolution`, `earliest_start`, `latest_end` | Cheapest fully covered consecutive interval window per energy type, or `null` |
+| `calculate_energy_cost` | `power_kw`, `duration_minutes`, `start_time`, optional `resolution` | Constant-power electricity estimate in kWh and currency-per-kWh × kWh; `incomplete` if any bin is missing |
+| `get_price_threshold_periods` | `threshold`, optional `below`, `minimum_duration_minutes`, `day`, `resolution` | Consecutive groups strictly below/above the price threshold for electricity and gas |
+| `get_best_split_periods` | `total_minutes`, `minimum_block_minutes`, optional `day`, `resolution` | Cheapest nonoverlapping fixed-size blocks; all blocks must be available |
+| `calculate_battery_savings` | `capacity_kwh`, `charge_power_kw`, `discharge_power_kw`, `round_trip_efficiency`, optional `day`, `resolution` | Estimated one-cycle charge-before-discharge price arbitrage for electricity |
+
+Dates default to today in `Europe/Amsterdam`. Datetime inputs must
+include a UTC offset. All durations are in minutes and must be divisible
+by the selected resolution. The electricity cost estimator requires the
+entire requested interval to fit within one local calendar day.
+`get_best_split_periods` selects whole fixed-length blocks; it does
+not model partial or interruptible loads within blocks.
+
+The battery calculation is a **simplified estimate**, not a dispatch
+optimizer: it assumes one charge/discharge cycle, constant price per
+interval, idealized energy transfer at the specified round-trip
+efficiency, and no standing charges, battery degradation, export
+restrictions, household demand profile or dynamic power throttling.
+Do not use it as a guaranteed savings forecast.
+
 ## Authentication
 
 Account and delivery-site tools use the existing upstream `python-frank-energie` login method. Configure the server process with `FRANK_ENERGIE_USERNAME` and `FRANK_ENERGIE_PASSWORD`; set `FRANK_ENERGIE_SITE_REFERENCE` for `get_account`. Both credentials must be provided together. Missing credentials or site references cause descriptive errors before an account request is sent. Avoid putting credentials in repository files, command-line arguments, logs or screenshots. The server currently logs in for each managed upstream session and closes the client after each request. Token persistence, renewal across requests and credential rotation have not been validated.
