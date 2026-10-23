@@ -76,9 +76,7 @@ async def test_consumption_rejects_invalid_ranges_and_duplicate_dates() -> None:
         ]
     )
     with pytest.raises(ValueError, match="Duplicate"):
-        await service.get_daily_consumption_statistics(
-            date(2026, 10, 1), date(2026, 10, 2)
-        )
+        await service.get_daily_consumption_statistics(date(2026, 10, 1), date(2026, 10, 2))
 
 
 @pytest.mark.asyncio
