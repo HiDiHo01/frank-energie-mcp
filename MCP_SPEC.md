@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Eleven read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Sixteen read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -127,6 +127,34 @@ independently. The tool may return a historical window earlier today;
 it does not filter to future intervals. Coverage status describes the
 whole day, not whether a matching period was found. DST days use elapsed
 UTC duration and never fabricate missing records.
+
+## Optimization tool contracts
+
+The server also registers `get_best_start_time`,
+`calculate_energy_cost`, `get_price_threshold_periods`,
+`get_best_split_periods`, and `calculate_battery_savings`.
+All operate on normalized `total` values from one upstream
+`prices(day, resolution=...)` call, without recomputing tax or markup.
+
+Time windows must contain contiguous, full-resolution intervals and
+fit within the selected Amsterdam calendar day. `get_best_start_time`
+returns the cheapest window for each energy type (or `null`); optional
+aware `earliest_start` and `latest_end` restrict candidate windows.
+`calculate_energy_cost` returns `status`, `cost`, and
+`energy_kwh` for a constant electrical power; incomplete data yield
+null amounts. `get_price_threshold_periods` returns arrays of
+strictly qualifying contiguous periods. `get_best_split_periods`
+returns `status`, `periods`, and `average_total`; missing complete
+blocks produce `incomplete`. The split selection is a cheapest-first
+block heuristic, not a globally optimal solution for arbitrary
+scheduling constraints.
+
+`calculate_battery_savings` returns a `status`, optional `cycle`,
+and explicit `assumptions`. The cycle contains charge/discharge
+windows, charge cost, avoided discharge cost, and estimated savings.
+It is an idealized single-cycle model, without a load profile, grid
+fees, battery wear or export modeling; results may be negative.
+The battery power limits are approximated at whole-resolution windows.
 
 ## Authentication and upstream access
 
