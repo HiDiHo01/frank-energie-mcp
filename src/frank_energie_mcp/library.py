@@ -17,6 +17,9 @@ from .optimization import (
     split_periods,
     threshold_periods,
     validated_series,
+    price_statistics,
+    price_volatility,
+    price_trend,
 )
 from .price_schemas import normalize_interval, normalize_market_prices
 
@@ -347,6 +350,114 @@ class FrankEnergieService:
                 round_trip_efficiency,
                 resolution,
             ),
+        }
+
+    async def get_negative_price_periods(
+        self,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+        minimum_duration_minutes: int = 15,
+    ) -> dict[str, Any]:
+        """Find consecutive negative-total electricity price intervals."""
+        requested_day, prices = await self._optimization_data(day, resolution)
+        return {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+            "electricity": threshold_periods(
+                validated_series(prices["electricity"], requested_day, resolution),
+                0.0, True, minimum_duration_minutes,
+            ),
+        }
+
+    async def get_price_trend(
+        self,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+        stable_tolerance: float = 0.005,
+    ) -> dict[str, Any]:
+        """Classify first-to-last total price changes separately by energy type."""
+        requested_day, prices = await self._optimization_data(day, resolution)
+        return {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+            **{
+                energy: price_trend(
+                    validated_series(prices[energy], requested_day, resolution),
+                    stable_tolerance,
+                )
+                for energy in ("electricity", "gas")
+            },
+        }
+
+    async def get_price_volatility(
+        self,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Compute population spread and adjacent price changes."""
+        requested_day, prices = await self._optimization_data(day, resolution)
+        return {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+            **{
+                energy: price_volatility(
+                    validated_series(prices[energy], requested_day, resolution)
+                )
+                for energy in ("electricity", "gas")
+            },
+        }
+
+    async def get_price_statistics(
+        self,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Return mean, median, percentiles, minimum and maximum total prices."""
+        requested_day, prices = await self._optimization_data(day, resolution)
+        return {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+            **{
+                energy: price_statistics(
+                    validated_series(prices[energy], requested_day, resolution)
+                )
+                for energy in ("electricity", "gas")
+            },
+        }
+
+    async def compare_days(
+        self,
+        first_day: date,
+        second_day: date,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Compare available total-price distributions across two local days."""
+        first_date, first_prices = await self._optimization_data(first_day, resolution)
+        second_date, second_prices = await self._optimization_data(second_day, resolution)
+        first = {
+            energy: price_statistics(
+                validated_series(first_prices[energy], first_date, resolution)
+            )
+            for energy in ("electricity", "gas")
+        }
+        second = {
+            energy: price_statistics(
+                validated_series(second_prices[energy], second_date, resolution)
+            )
+            for energy in ("electricity", "gas")
+        }
+        return {
+            "resolution": resolution,
+            "first": {"date": first_date.isoformat(), **first},
+            "second": {"date": second_date.isoformat(), **second},
+            "mean_difference": {
+                energy: (
+                    second[energy]["mean"] - first[energy]["mean"]
+                    if first[energy]["mean"] is not None
+                    and second[energy]["mean"] is not None else None
+                )
+                for energy in ("electricity", "gas")
+            },
         }
 
     async def get_tomorrow_prices(self, resolution: PriceResolution = "PT15M") -> Any:
