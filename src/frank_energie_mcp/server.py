@@ -3,10 +3,19 @@
 from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.exceptions import ToolError
 
 from .library import FrankEnergieService, default_service
 
 SERVER_NAME = "frank-energie-mcp"
+
+
+async def safe_tool_call(operation):
+    """Hide upstream exception details from MCP clients."""
+    try:
+        return await operation()
+    except Exception:
+        raise ToolError("Frank Energie request failed.") from None
 
 
 def create_server(service: FrankEnergieService | None = None) -> FastMCP:
@@ -17,32 +26,32 @@ def create_server(service: FrankEnergieService | None = None) -> FastMCP:
     @server.tool()
     async def get_current_prices() -> object:
         """Get today's electricity and gas pricing data."""
-        return await energy_service.get_current_prices()
+        return await safe_tool_call(energy_service.get_current_prices)
 
     @server.tool()
     async def get_today_prices() -> object:
         """Get today's pricing data."""
-        return await energy_service.get_today_prices()
+        return await safe_tool_call(energy_service.get_today_prices)
 
     @server.tool()
     async def get_tomorrow_prices() -> object:
         """Get tomorrow's pricing data."""
-        return await energy_service.get_tomorrow_prices()
+        return await safe_tool_call(energy_service.get_tomorrow_prices)
 
     @server.tool()
     async def get_gas_price() -> object:
         """Get today's pricing data including gas prices."""
-        return await energy_service.get_gas_price()
+        return await safe_tool_call(energy_service.get_gas_price)
 
     @server.tool()
     async def get_account() -> object:
         """Get the authenticated account information."""
-        return await energy_service.get_account()
+        return await safe_tool_call(energy_service.get_account)
 
     @server.tool()
     async def list_sites() -> object:
         """Get the account data containing delivery sites."""
-        return await energy_service.list_sites()
+        return await safe_tool_call(energy_service.list_sites)
 
     @server.resource("frank-energie://capabilities")
     def capabilities() -> str:
