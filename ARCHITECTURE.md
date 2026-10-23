@@ -50,9 +50,11 @@ Separate `auth.py`, `config.py`, `resources/`, and `prompts/` implementations ar
 
 - Expose nine asynchronous read-only tools, one static resource, and one static prompt.
 - Validate `resolution` as `PT15M` or `PT60M` at the tool boundary.
-- Use `Europe/Amsterdam` dates for today/tomorrow price requests.
+- Use `Europe/Amsterdam` dates for today/tomorrow and optional-date statistical price requests.
 - Select upstream `current_hour` records for current electricity/gas prices.
 - Normalize market prices to explicitly permitted public fields; do not serialize raw upstream models.
+- Reuse normalized `total` values for arithmetic averages and extrema; never reimplement upstream taxes or markups.
+- Check interval containment, overlaps and elapsed coverage against local-day boundaries for statistical tools.
 - Return only authentication status for account calls and site count for site calls.
 - Convert tool failures into generic client errors without logging upstream exception messages.
 
@@ -71,6 +73,25 @@ Separate `auth.py`, `config.py`, `resources/`, and `prompts/` implementations ar
 7. FastMCP returns the response, or a generic `ToolError` on handled failures.
 
 Price interval normalization requires ordered timezone-aware timestamps, finite numeric totals, and no more than 200 intervals per energy type for full-day results. This is a defensive MCP response-size limit, **not** an upstream API limit. The upstream library supports `PT15M` and `PT60M`; complete Europe/Amsterdam days produce 92/96/100 or 23/24/25 intervals respectively, including DST transitions. The cap allows headroom and does not assert that upstream always returns complete days.
+
+## Daily statistics data flow
+
+The three daily statistics tools share the same upstream call and normalized
+interval contract. The service requests `prices(day, resolution=...)`, passes
+the result through `normalize_market_prices`, then operates independently on
+electricity and gas records. `get_average_prices` computes an unweighted
+arithmetic mean of available `total` values. `get_lowest_price` and
+`get_highest_price` select the interval with the extreme normalized `total`.
+The minimum/maximum operations reuse the average helper's interval chronology
+and coverage validation, rather than duplicating this logic.
+
+The coverage validator compares aware UTC instants against the boundaries of
+the requested `Europe/Amsterdam` calendar day. This accounts for daylight
+saving transitions and reports `empty`, `incomplete`, or `complete`
+without assuming the API returns every interval. It rejects overlaps,
+duplicates and intervals outside the requested day. The current
+implementation selects the first upstream record on equal extrema and
+does not weight average prices by interval duration.
 
 ## Authentication and privacy
 
@@ -94,7 +115,8 @@ The default runtime is stdio. Optional Streamable HTTP binds only to `127.0.0.1`
 ## Current limitations and future work
 
 - `get_lowest_price` and `get_highest_price` select minimum and maximum normalized total-price intervals using the shared coverage validation.
-- `get_average_prices` calculates the arithmetic mean of normalized `total` values over all returned intervals; it reports missing coverage and does not impute missing prices.\n- The minimal `get_account` response indicates success only; it is not an account summary.
+- `get_average_prices` calculates the arithmetic mean of normalized `total` values over all returned intervals; it reports missing coverage and does not impute missing prices.
+- `The minimal `get_account` response indicates success only; it is not an account summary.
 - Site discovery returns a count, not selectable site details.
 - No persistent login/token lifecycle is implemented in this MCP layer.
 - The 200-interval cap is a defensive MCP bound; live upstream response behavior still needs verification.
