@@ -9,7 +9,7 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
 from pydantic import BaseModel, ConfigDict, Field
 
-from .library import FrankEnergieService, default_service
+from .library import FrankEnergieService, PriceResolution, default_service
 
 
 class AccountResponse(BaseModel):
@@ -61,24 +61,24 @@ def create_server(service: FrankEnergieService | None = None) -> FastMCP:
     energy_service = service if service is not None else default_service()
 
     @server.tool()
-    async def get_current_prices() -> object:
+    async def get_current_prices(resolution: PriceResolution = "PT15M") -> object:
         """Get today's electricity and gas pricing data."""
-        return await safe_tool_call(energy_service.get_current_prices)
+        return await safe_tool_call(lambda: energy_service.get_current_prices(resolution=resolution))
 
     @server.tool()
-    async def get_today_prices() -> object:
+    async def get_today_prices(resolution: PriceResolution = "PT15M") -> object:
         """Get today's pricing data."""
-        return await safe_tool_call(energy_service.get_today_prices)
+        return await safe_tool_call(lambda: energy_service.get_today_prices(resolution=resolution))
 
     @server.tool()
-    async def get_tomorrow_prices() -> object:
+    async def get_tomorrow_prices(resolution: PriceResolution = "PT15M") -> object:
         """Get tomorrow's pricing data."""
-        return await safe_tool_call(energy_service.get_tomorrow_prices)
+        return await safe_tool_call(lambda: energy_service.get_tomorrow_prices(resolution=resolution))
 
     @server.tool()
-    async def get_gas_price() -> object:
+    async def get_gas_price(resolution: PriceResolution = "PT15M") -> object:
         """Get today's pricing data including gas prices."""
-        return await safe_tool_call(energy_service.get_gas_price)
+        return await safe_tool_call(lambda: energy_service.get_gas_price(resolution=resolution))
 
     @server.tool()
     async def get_account() -> object:
