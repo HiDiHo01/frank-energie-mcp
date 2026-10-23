@@ -158,6 +158,54 @@ class FrankEnergieService:
             }
         return result
 
+    async def get_lowest_period(
+        self,
+        period_minutes: int,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Find the cheapest uninterrupted period by average total price."""
+        return await self._get_extreme_period(period_minutes, day, resolution, highest=False)
+
+    async def get_highest_period(
+        self,
+        period_minutes: int,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Find the most expensive uninterrupted period by average total price."""
+        return await self._get_extreme_period(period_minutes, day, resolution, highest=True)
+
+    async def _get_extreme_period(
+        self,
+        period_minutes: int,
+        day: date | None,
+        resolution: PriceResolution,
+        *,
+        highest: bool,
+    ) -> dict[str, Any]:
+        """Fetch once and find a contiguous fixed-duration window per energy type."""
+        step = {"PT15M": 15, "PT60M": 60}[resolution]
+        if isinstance(period_minutes, bool) or not isinstance(period_minutes, int):
+            raise ValueError("period_minutes must be a positive integer.")
+        if period_minutes <= 0 or period_minutes % step:
+            raise ValueError("period_minutes must be a positive multiple of the resolution.")
+        requested_day = day or datetime.now(ZoneInfo("Europe/Amsterdam")).date()
+        async with self.bridge.session() as client:
+            prices = await client.prices(requested_day, resolution=resolution)
+        normalized = normalize_market_prices(prices)
+        return {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+            "period_minutes": period_minutes,
+            "electricity": _extreme_period(
+                normalized["electricity"], requested_day, period_minutes, step, highest
+            ),
+            "gas": _extreme_period(
+                normalized["gas"], requested_day, period_minutes, step, highest
+            ),
+        }
+
     async def get_tomorrow_prices(self, resolution: PriceResolution = "PT15M") -> Any:
         """Return tomorrow's prices."""
         tomorrow = datetime.now(ZoneInfo("Europe/Amsterdam")).date() + timedelta(days=1)
@@ -229,6 +277,45 @@ def _average_series(intervals: list[dict[str, Any]], day: date) -> dict[str, Any
             if not ordered
             else "complete" if observed_seconds == day_seconds else "incomplete"
         ),
+    }
+
+
+def _extreme_period(
+    intervals: list[dict[str, Any]],
+    day: date,
+    period_minutes: int,
+    step_minutes: int,
+    highest: bool,
+) -> dict[str, Any]:
+    """Find a fixed-size uninterrupted window; ignore gaps and partial windows."""
+    coverage = _average_series(intervals, day)
+    ordered = sorted(intervals, key=lambda entry: entry["date_from"])
+    window_size = period_minutes // step_minutes
+    best: dict[str, Any] | None = None
+    step_seconds = step_minutes * 60
+    for index in range(len(ordered) - window_size + 1):
+        window = ordered[index : index + window_size]
+        starts = [datetime.fromisoformat(entry["date_from"]).astimezone(UTC) for entry in window]
+        ends = [datetime.fromisoformat(entry["date_till"]).astimezone(UTC) for entry in window]
+        if any((end - start).total_seconds() != step_seconds for start, end in zip(starts, ends)):
+            continue
+        if any(ends[offset] != starts[offset + 1] for offset in range(window_size - 1)):
+            continue
+        average = sum(entry["total"] for entry in window) / window_size
+        if best is None or (average > best["average_total"] if highest else average < best["average_total"]):
+            best = {
+                "start": window[0]["date_from"],
+                "end": window[-1]["date_till"],
+                "average_total": average,
+                "interval_count": window_size,
+                "unit": window[0]["unit"],
+            }
+    return {
+        "period": best,
+        "available_interval_count": coverage["interval_count"],
+        "coverage_seconds": coverage["coverage_seconds"],
+        "expected_seconds": coverage["expected_seconds"],
+        "status": coverage["status"],
     }
 
 
