@@ -698,6 +698,34 @@ class FrankEnergieService:
             "is_available_in_country": in_country,
         }
 
+    async def get_smart_pv_operational_status(self, device_id: str) -> dict[str, Any]:
+        """Expose upstream PV operational and steering status without identifiers."""
+        self._require_credentials()
+        if not isinstance(device_id, str) or not device_id.strip():
+            raise ValueError("device_id must be a non-empty string.")
+        async with self.bridge.session() as client:
+            summary = await client.smart_pv_system_summary(device_id)
+        if summary is None:
+            return {"available": False}
+        from enum import Enum
+
+        result: dict[str, Any] = {"available": True}
+        for field in ("operational_status", "steering_status"):
+            raw = getattr(summary, field, None)
+            value = raw.value if isinstance(raw, Enum) else raw
+            if not isinstance(value, str) or not value or len(value) > 64:
+                raise ValueError("Unexpected smart PV status.")
+            result[field] = value
+        timestamp = getattr(summary, "operational_status_timestamp", None)
+        if timestamp is not None and (
+            not isinstance(timestamp, datetime) or timestamp.tzinfo is None
+        ):
+            raise ValueError("Unexpected smart PV status timestamp.")
+        result["operational_status_timestamp"] = (
+            timestamp.isoformat() if timestamp is not None else None
+        )
+        return result
+
     async def get_smart_feed_in_status(self) -> dict[str, bool | None]:
         """Return allowlisted feed-in eligibility flags, never user identifiers."""
         self._require_credentials()
