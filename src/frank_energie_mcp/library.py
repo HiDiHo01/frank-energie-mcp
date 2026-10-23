@@ -301,7 +301,7 @@ def _extreme_period(
         ends = [datetime.fromisoformat(entry["date_till"]).astimezone(UTC) for entry in window]
         if any(
             (end - start).total_seconds() != step_seconds
-            for start, end in zip(starts, ends)
+            for start, end in zip(starts, ends, strict=True)
         ):
             continue
         if any(ends[offset] != starts[offset + 1] for offset in range(window_size - 1)):
