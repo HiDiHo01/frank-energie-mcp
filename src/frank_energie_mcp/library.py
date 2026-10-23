@@ -64,10 +64,14 @@ class FrankEnergieService:
 
     bridge: FrankEnergieLibraryBridge
 
-    async def get_current_prices(self) -> Any:
-        """Return current prices for today."""
+    async def get_current_prices(self) -> dict[str, Any]:
+        """Return the currently applicable upstream electricity and gas records."""
         async with self.bridge.session() as client:
-            return await client.prices(datetime.now(ZoneInfo("Europe/Amsterdam")).date())
+            prices = await client.prices(datetime.now(ZoneInfo("Europe/Amsterdam")).date())
+        return {
+            "electricity": _current_price(prices.electricity),
+            "gas": _current_price(prices.gas),
+        }
 
     async def get_today_prices(self) -> Any:
         """Return today's prices."""
@@ -80,10 +84,11 @@ class FrankEnergieService:
         async with self.bridge.session() as client:
             return await client.prices(tomorrow)
 
-    async def get_gas_price(self) -> Any:
-        """Return gas pricing data."""
+    async def get_gas_price(self) -> dict[str, Any] | None:
+        """Return the currently applicable gas price, or None if unavailable."""
         async with self.bridge.session() as client:
-            return await client.prices(datetime.now(ZoneInfo("Europe/Amsterdam")).date())
+            prices = await client.prices(datetime.now(ZoneInfo("Europe/Amsterdam")).date())
+        return _current_price(prices.gas)
 
     async def get_account(self) -> Any:
         """Return the current account data."""
