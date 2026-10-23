@@ -254,8 +254,8 @@ class FrankEnergieService:
             "period_minutes": period_minutes,
             "electricity": _extreme_period(
                 normalized["electricity"], requested_day, period_minutes, step, highest
-            "gas": _extreme_period(normalized["gas"], requested_day, period_minutes, step, highest),
             ),
+            "gas": _extreme_period(normalized["gas"], requested_day, period_minutes, step, highest),
         }
 
     async def _optimization_data(
