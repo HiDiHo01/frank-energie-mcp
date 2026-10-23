@@ -122,7 +122,7 @@ def _current_price(series: Any) -> dict[str, Any] | None:
         "date_from": price.date_from.isoformat(),
         "date_till": price.date_till.isoformat(),
         "total": price.total,
-        "unit": price.unit,
+        "unit": getattr(price, "per_unit", None) or price.unit,
         "energy_type": price.energy_type,
     }
 
