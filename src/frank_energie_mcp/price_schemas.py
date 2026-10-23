@@ -57,7 +57,7 @@ def normalize_market_prices(prices: Any) -> dict[str, Any]:
     result: dict[str, list[dict[str, Any]]] = {}
     for energy in ("electricity", "gas"):
         series = getattr(prices, energy)
-        entries = getattr(series, "price_data")
+        entries = series.price_data
         if not isinstance(entries, list) or len(entries) > 200:
             raise ValueError("Invalid market-price series.")
         result[energy] = [normalize_interval(entry) for entry in entries]
