@@ -1074,6 +1074,27 @@ class FrankEnergieService:
             "average_session_result": total / len(results) if results else None,
         }
 
+    async def get_smart_pv_financial_result(self, device_id: str) -> dict[str, Any]:
+        """Read the upstream PV bonus and result without exposing system identifiers."""
+        self._require_credentials()
+        if not isinstance(device_id, str) or not device_id.strip():
+            raise ValueError("device_id must be a non-empty string.")
+        async with self.bridge.session() as client:
+            summary = await client.smart_pv_system_summary(device_id)
+        if summary is None:
+            return {"available": False, "total_bonus": None, "total_result": None}
+        values: dict[str, float | None] = {}
+        for field in ("total_bonus", "total_result"):
+            value = getattr(summary, field, None)
+            if value is not None and (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not isfinite(value)
+            ):
+                raise ValueError("Unexpected smart PV financial result.")
+            values[field] = float(value) if value is not None else None
+        return {"available": True, **values}
+
     async def get_smart_battery_trading_result(self, device_id: str) -> dict[str, Any]:
         """Read the upstream cumulative trading result without exposing device data."""
         self._require_credentials()
