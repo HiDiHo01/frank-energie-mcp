@@ -103,3 +103,47 @@ async def test_upstream_error_does_not_leak_into_logs(
     assert "category=ValueError" in output
     for sensitive in (secret, password, customer):
         assert sensitive not in output
+
+
+@pytest.mark.asyncio
+async def test_account_response_excludes_personal_information() -> None:
+    """Account output must contain only the explicit public schema."""
+    service = AsyncMock()
+    service.get_account.return_value = {
+        "email": "customer@example.invalid",
+        "token": "fake-secret",
+        "address": "Example Street 1",
+    }
+    response = await create_server(service).call_tool("get_account", {})
+    rendered = str(response)
+    assert "authenticated" in rendered
+    for sensitive in ("customer@example.invalid", "fake-secret", "Example Street 1"):
+        assert sensitive not in rendered
+
+
+@pytest.mark.asyncio
+async def test_sites_response_excludes_personal_information() -> None:
+    """Site output must disclose only the number of sites."""
+    service = AsyncMock()
+    service.list_sites.return_value = {
+        "sites": [{"address": "Example Street 1", "reference": "private-site"}]
+    }
+    response = await create_server(service).call_tool("list_sites", {})
+    rendered = str(response)
+    assert "count" in rendered
+    assert "Example Street 1" not in rendered
+    assert "private-site" not in rendered
+
+
+@pytest.mark.asyncio
+async def test_unknown_sites_structure_is_rejected_without_leaking_data() -> None:
+    """Fail closed when the upstream site structure is unrecognized."""
+    service = AsyncMock()
+    service.list_sites.return_value = {"unexpected": "private-site"}
+    try:
+        response = await create_server(service).call_tool("list_sites", {})
+        rendered = str(response)
+    except Exception as exc:
+        rendered = str(exc)
+    assert "private-site" not in rendered
+    assert "Frank Energie request failed" in rendered
