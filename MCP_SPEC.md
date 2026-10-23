@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Six read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Seven read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -19,7 +19,7 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_current_prices` | `get_current_prices(resolution)` | Object with `electricity` and `gas` active upstream `current_hour` intervals, each a normalized record or `null` |
 | `get_today_prices` | `get_today_prices(resolution)` | Normalized `electricity` and `gas` interval arrays from `prices(today, resolution=...)` |
 | `get_tomorrow_prices` | `get_tomorrow_prices(resolution)` | Normalized interval arrays from `prices(tomorrow, resolution=...)` |
-| `get_gas_price` | `get_gas_price(resolution)` | Normalized active gas interval or `null` |
+| `get_average_prices` | `get_average_prices(day, resolution)` | Per-energy average of all available normalized `total` values, interval count, first/last timestamps, observed and expected coverage seconds, and `empty`/`incomplete`/`complete` status. `day` defaults to today in Europe/Amsterdam. Overlaps and out-of-day intervals are rejected. |\n| `get_gas_price` | `get_gas_price(resolution)` | Normalized active gas interval or `null` |
 | `get_account` | `get_account()` | After a successful authenticated account request, returns only `{"authenticated": true}`; account details are deliberately not exposed |
 | `list_sites` | `list_sites()` | `{"count": N}` for a recognized site collection; site identifiers and addresses are not exposed |
 
