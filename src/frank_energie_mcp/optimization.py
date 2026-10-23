@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
-from math import isfinite
+from math import isfinite, sqrt
+from statistics import median
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -228,3 +229,75 @@ def battery_savings(
         "cycle": best,
         "assumptions": "One idealized cycle; no fixed fees, battery degradation or load profile.",
     }
+
+
+def price_statistics(
+    series: list[tuple[datetime, datetime, float]],
+) -> dict[str, Any]:
+    """Compute descriptive population statistics of available total prices."""
+    values = sorted(item[2] for item in series)
+    if not values:
+        return {
+            "count": 0, "mean": None, "median": None, "minimum": None,
+            "maximum": None, "range": None, "standard_deviation": None,
+            "p25": None, "p75": None,
+        }
+    mean = sum(values) / len(values)
+
+    def percentile(fraction: float) -> float:
+        """Interpolate at a fractional index in the ordered values."""
+        position = (len(values) - 1) * fraction
+        lower = int(position)
+        return values[lower] + (values[min(lower + 1, len(values) - 1)] - values[lower]) * (
+            position - lower
+        )
+
+    return {
+        "count": len(values),
+        "mean": mean,
+        "median": median(values),
+        "minimum": values[0],
+        "maximum": values[-1],
+        "range": values[-1] - values[0],
+        "standard_deviation": sqrt(sum((value - mean) ** 2 for value in values) / len(values)),
+        "p25": percentile(0.25),
+        "p75": percentile(0.75),
+    }
+
+
+def price_volatility(
+    series: list[tuple[datetime, datetime, float]],
+) -> dict[str, Any]:
+    """Describe spread and adjacent price changes without bridging missing intervals."""
+    stats = price_statistics(series)
+    differences = [
+        series[i][2] - series[i - 1][2]
+        for i in range(1, len(series))
+        if series[i - 1][1] == series[i][0]
+    ]
+    return {
+        **stats,
+        "adjacent_change_count": len(differences),
+        "largest_increase": max(differences, default=None),
+        "largest_decrease": min(differences, default=None),
+        "mean_absolute_change": (
+            sum(abs(value) for value in differences) / len(differences)
+            if differences else None
+        ),
+    }
+
+
+def price_trend(
+    series: list[tuple[datetime, datetime, float]],
+    stable_tolerance: float,
+) -> dict[str, Any]:
+    """Classify endpoint change over available prices, reporting gaps explicitly."""
+    tolerance = positive(stable_tolerance, "stable_tolerance", allow_zero=True)
+    if len(series) < 2:
+        return {"direction": "insufficient_data", "change": None, "has_gaps": False}
+    change = series[-1][2] - series[0][2]
+    gaps = any(series[i - 1][1] != series[i][0] for i in range(1, len(series)))
+    direction = "stable" if abs(change) <= tolerance else (
+        "rising" if change > 0 else "falling"
+    )
+    return {"direction": direction, "change": change, "has_gaps": gaps}
