@@ -375,6 +375,13 @@ def create_server(
         )
 
     @server.tool()
+    async def get_smart_battery_trading_result(device_id: str) -> object:
+        """Read the cumulative trading result for one linked smart battery."""
+        return await safe_tool_call(
+            lambda: energy_service.get_smart_battery_trading_result(device_id)
+        )
+
+    @server.tool()
     async def get_smart_battery_status(device_id: str) -> object:
         """Read state of charge, status and capacity of one linked battery."""
         return await safe_tool_call(lambda: energy_service.get_smart_battery_status(device_id))
