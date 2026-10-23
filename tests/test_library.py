@@ -66,3 +66,36 @@ async def test_server_registers_tools_resources_and_prompts(
     assert any(str(resource.uri) == "frank-energie://capabilities" for resource in resources)
     prompts = await server.list_prompts()
     assert any(prompt.name == "summarize_energy_prices" for prompt in prompts)
+
+
+@pytest.mark.asyncio
+async def test_gas_prices_uses_single_date(
+    service: FrankEnergieService, client: AsyncMock
+) -> None:
+    """Prevent regression to the unsupported two-date API call."""
+    await service.get_gas_price()
+    assert len(client.prices.await_args.args) == 1
+    assert isinstance(client.prices.await_args.args[0], date)
+    client.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_tomorrow_prices_uses_single_date(
+    service: FrankEnergieService, client: AsyncMock
+) -> None:
+    """Use the upstream single-date price API for tomorrow."""
+    await service.get_tomorrow_prices()
+    assert len(client.prices.await_args.args) == 1
+    assert isinstance(client.prices.await_args.args[0], date)
+    client.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_session_closes_after_upstream_failure(
+    service: FrankEnergieService, client: AsyncMock
+) -> None:
+    """Close the upstream session even when the request fails."""
+    client.prices.side_effect = RuntimeError("Simulated upstream failure")
+    with pytest.raises(RuntimeError, match="Simulated upstream failure"):
+        await service.get_today_prices()
+    client.close.assert_awaited_once()
