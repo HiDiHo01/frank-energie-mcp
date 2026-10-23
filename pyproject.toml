@@ -14,7 +14,7 @@ authors = [
 ]
 dependencies = [
   "python-frank-energie",
-  "mcp",
+  "mcp>=1.0,<2",
 ]
 
 [project.optional-dependencies]
