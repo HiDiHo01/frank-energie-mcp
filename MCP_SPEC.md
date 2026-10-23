@@ -1,106 +1,57 @@
 # MCP Specification
 
-## Overview
+## Implementation status
 
-This document defines the intended MCP surface for `frank-energie-mcp`.
+The official Python MCP SDK provides the FastMCP stdio runtime. This document distinguishes registered interfaces from fully operational features. The interface is not yet stable.
 
-The server should expose Frank Energie data through MCP tools, resources, and prompts while delegating all Frank Energie domain access to `python-frank-energie`.
+## Tools
 
-## Principles
+Six asynchronous, argument-free tools are registered:
 
-- Keep the surface small and predictable.
-- Keep tool outputs structured and deterministic.
-- Prefer read-only operations for the first release.
-- Avoid duplicating backend logic in the MCP server.
-- Return data that is easy for LLMs to summarize and compare.
-- Build the server on the official Python MCP SDK using a FastMCP-style runtime.
+| Tool | Service operation | Status |
+| --- | --- | --- |
+| `get_current_prices` | `get_current_prices()` | Returns today's market prices; current interval not isolated |
+| `get_today_prices` | `get_today_prices()` | Calls upstream `prices(today)` |
+| `get_tomorrow_prices` | `get_tomorrow_prices()` | Calls upstream `prices(tomorrow)` |
+| `get_gas_price` | `get_gas_price()` | Returns today's market prices; gas not isolated |
+| `get_account` | `get_account()` | Raises until authentication and site selection are implemented |
+| `list_sites` | `list_sites()` | Calls upstream `UserSites()`; requires authentication |
 
-## Tool categories
+Dates use the `Europe/Amsterdam` calendar. No tool should fabricate missing price data.
 
-### Price tools
+## Resources and prompts
 
-- `get_current_prices`
-- `get_today_prices`
-- `get_tomorrow_prices`
-- `get_gas_price`
+- `frank-energie://capabilities`: registered static, read-only text resource describing capabilities.
+- `summarize_energy_prices`: registered static prompt instructing the client to compare today and tomorrow, preserving units and timestamps.
 
-These tools should return normalized price records with timestamps, price values, and contextual metadata.
+Dynamic price/account resources and further prompts remain future work.
 
-### Account tools
+## Upstream contracts
 
-- `get_account`
-- `list_sites`
+All data access is delegated to `python-frank-energie`. Verified upstream method signatures include `prices(start_date: date | None = None, resolution=...)`, `UserSites(site_reference: str | None = None)` and `user(site_reference: str | None = None)`. Account and site operations require authentication; `user()` additionally needs a valid site reference.
 
-These tools should return compact account and site summaries.
+The bridge creates and closes its asynchronous client per request. Do not reimplement GraphQL, price calculations or token renewal in the MCP layer.
 
-### Analysis tools
+## Output and error behavior
 
-Future tools may include:
+The tool handlers currently forward service results. A stable JSON envelope and upstream model serialization have **not** been implemented or validated. The earlier proposed `status/source/data` envelope is a design goal, not current behavior.
 
-- `get_cheapest_hours`
-- `get_price_average`
-- `estimate_costs`
-- `compare_days`
-- `suggest_best_schedule`
+Authentication, transport failures, sensitive-data redaction and MCP-compatible error translation require further implementation and tests.
 
-## Resource categories
+## Testing
 
-Resources should expose structured, read-only data. Good candidates are:
-
-- current price series
-- today price series
-- tomorrow price series
-- gas price series
-- account summary
-- site metadata
-
-Resources should be compact and stable enough for retrieval without side effects.
-
-## Prompt categories
-
-Prompts should help clients ask useful questions about the data.
-
-Possible prompts:
-
-- summarize today's electricity prices
-- compare today and tomorrow
-- identify the cheapest charging window
-- explain current energy cost trends
-- generate a short consumer-friendly summary
-
-## Input validation
-
-Every tool must validate input at the MCP boundary before calling the library layer. Validation should fail fast with clear error messages.
-
-## Output shape
-
-Tool outputs should follow a consistent shape, for example:
-
-```json
-{
-  "status": "ok",
-  "source": "python-frank-energie",
-  "data": {}
-}
+```bash
+python -m ruff check .
+python -m ruff format --check .
+python -m mypy src tests
+python -m pytest -q
 ```
 
-Errors should be explicit, structured, and suitable for display in MCP clients.
+Regression tests cover selected upstream method signatures, session cleanup, tool registration and resource/prompt discovery. A real MCP client interoperability test is still required.
 
-## Authentication
+## Planned improvements
 
-The MCP server should not invent its own Frank Energie authentication protocol. It should use the existing authentication capabilities of `python-frank-energie`.
-
-## Error handling
-
-The server should translate library exceptions into MCP-friendly errors without leaking secrets or internal stack details by default.
-
-## Versioning
-
-The MCP surface may evolve independently of the library, but breaking changes should be minimized and documented.
-
-## Non-goals
-
-- Direct GraphQL access from the MCP layer
-- Home Assistant entity exposure
-- Hidden polling loops unrelated to a request
-- Duplicate cache implementations unless required by MCP transport behavior
+1. Secure authentication and site-reference selection through the upstream library.
+2. Accurate current-interval and gas-only extraction using verified upstream models.
+3. Deterministic, serializable, privacy-aware MCP response schemas.
+4. End-to-end protocol and failure-path tests.
