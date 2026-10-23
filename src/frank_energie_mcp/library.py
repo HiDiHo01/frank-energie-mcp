@@ -1074,6 +1074,27 @@ class FrankEnergieService:
             "average_session_result": total / len(results) if results else None,
         }
 
+    async def get_smart_battery_trading_result(self, device_id: str) -> dict[str, Any]:
+        """Read the upstream cumulative trading result without exposing device data."""
+        self._require_credentials()
+        if not isinstance(device_id, str) or not device_id.strip():
+            raise ValueError("device_id must be a non-empty string.")
+        async with self.bridge.session() as client:
+            details = await client.smart_battery_details(device_id)
+        if details is None:
+            return {"available": False, "total_result": None}
+        summary = getattr(details, "smart_battery_summary", None)
+        if summary is None:
+            raise ValueError("Unexpected smart battery detail response.")
+        result = getattr(summary, "total_result", None)
+        if (
+            isinstance(result, bool)
+            or not isinstance(result, (int, float))
+            or not isfinite(result)
+        ):
+            raise ValueError("Unexpected smart battery trading result.")
+        return {"available": True, "total_result": float(result)}
+
     async def get_smart_battery_status(self, device_id: str) -> dict[str, Any]:
         """Read a battery's current state without exposing identifiers or settings."""
         self._require_credentials()
