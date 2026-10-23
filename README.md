@@ -74,6 +74,8 @@ The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol e
 | Tool | `get_smart_battery_count` | Returns only the number of linked smart batteries; requires credentials. |
 | Tool | `get_smart_pv_system_count` | Returns only the number of linked smart PV systems; requires credentials. |
 | Tool | `get_electric_vehicle_count` | Returns only the number of linked Enode vehicles; requires credentials. |
+| Tool | `get_smart_feed_in_status` | Read-only feed-in enrollment flags, without user IDs. |
+| Tool | `get_contract_price_resolution_state` | Read active and available contract resolution options using a connection ID; does not change settings. |
 | Tool | `get_account` | Requires credentials and a site reference; returns only `{"authenticated": true}` after a successful account request |
 | Tool | `list_sites` | Requires credentials; returns only the number of recognized delivery sites |
 | Resource | `frank-energie://capabilities` | Static description of capabilities |
@@ -308,6 +310,25 @@ month insights, customer-specific prices, contract price resolution,
 battery sessions, solar summaries and charging controls. These are
 not exposed here because they require additional privacy, input and
 write-action policy design. The three new tools perform no mutations.
+
+## Additional account status tools
+
+`get_smart_feed_in_status()` calls upstream `user_smart_feed_in()`
+and returns only the boolean flags `is_activated`,
+`has_accepted_terms`, `is_app_onboarding_available` and
+`is_available_in_country`, plus `available`. If the upstream API
+returns no enrollment, `available` is false and flags are null.
+No user ID or account timestamps are returned.
+
+`get_contract_price_resolution_state(connection_id)` delegates to
+`contract_price_resolution_state(connection_id)` and returns only
+`available`, `active_option`, `available_options` and
+`is_change_request_possible`. The caller must provide a valid
+connection ID; the ID is not echoed in the response. This tool never
+calls the upstream contract change operation.
+
+Both tools require configured Frank Energie credentials. They are
+read-only and use the existing generic error boundary.
 
 ## Authentication
 
