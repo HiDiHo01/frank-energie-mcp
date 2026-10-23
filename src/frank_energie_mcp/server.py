@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import Awaitable, Callable
 
 from mcp.server.fastmcp import FastMCP
@@ -55,9 +56,14 @@ async def safe_tool_call[T](operation: Callable[[], Awaitable[T]]) -> T:
         raise ToolError("Frank Energie request failed.") from None
 
 
-def create_server(service: FrankEnergieService | None = None) -> FastMCP:
+def create_server(
+    service: FrankEnergieService | None = None,
+    *,
+    host: str = "127.0.0.1",
+    port: int = 8000,
+) -> FastMCP:
     """Create the MCP server and register its read-only tools."""
-    server = FastMCP(SERVER_NAME)
+    server = FastMCP(SERVER_NAME, host=host, port=port)
     energy_service = service if service is not None else default_service()
 
     @server.tool()
@@ -117,5 +123,20 @@ def create_server(service: FrankEnergieService | None = None) -> FastMCP:
 
 
 def main() -> None:
-    """Run the MCP server over standard input and output."""
-    create_server().run(transport="stdio")
+    """Run stdio by default, or loopback-only Streamable HTTP."""
+    transport = os.environ.get("FRANK_ENERGIE_MCP_TRANSPORT", "stdio")
+    if transport == "stdio":
+        create_server().run(transport="stdio")
+        return
+    if transport != "streamable-http":
+        raise ValueError("Unsupported MCP transport; use stdio or streamable-http.")
+    host = os.environ.get("FRANK_ENERGIE_MCP_HOST", "127.0.0.1")
+    if host != "127.0.0.1":
+        raise ValueError("HTTP transport must bind to 127.0.0.1.")
+    try:
+        port = int(os.environ.get("FRANK_ENERGIE_MCP_PORT", "8000"))
+    except ValueError:
+        raise ValueError("MCP port must be an integer.") from None
+    if not 1 <= port <= 65535:
+        raise ValueError("MCP port must be between 1 and 65535.")
+    create_server(host=host, port=port).run(transport="streamable-http")
