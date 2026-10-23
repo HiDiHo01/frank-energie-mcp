@@ -23,6 +23,7 @@ class ListSitesResult:
 
     sites: tuple[SiteResult, ...]
 
+
 def _extract_sites_payload(data: Any) -> ListSitesResult:
     """Convert library data into the MCP response model.
 
