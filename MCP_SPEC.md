@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Forty read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Forty-one read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -437,3 +437,10 @@ The test suite covers service delegation, upstream call signatures, session clea
 2. Validate end-to-end MCP calls over stdio and loopback Streamable HTTP.
 3. Review authentication lifecycle, client authorization for any external deployment, and error handling.
 4. Align tool names and account/site output contracts with intended client functionality.
+
+## Smart battery trading result
+
+`get_smart_battery_trading_result(device_id)` requires credentials and
+returns `{available: bool, total_result: number | null}`. It delegates to
+upstream `smart_battery_details()` and rejects invalid or nonfinite
+results. The device ID is an input only and is not echoed in the response.
