@@ -263,6 +263,15 @@ smart charging flags. Vehicle IDs and configuration are
 not serialized. Credentials are required; the operation
 does not change charging settings.
 
+## Smart PV fleet aggregation
+
+The PV fleet tool delegates to upstream `smart_pv_systems()`
+and aggregates validated panel-group counts and declared
+capacity. Missing numeric fields are not imputed. It
+does not serialize connection EANs, inverter serial numbers
+or device identifiers. It requires credentials and is
+read-only.
+
 ## Authentication and privacy
 
 Public market-price tools work without configured credentials. Account/site operations require `FRANK_ENERGIE_USERNAME` and `FRANK_ENERGIE_PASSWORD`; account operations also require `FRANK_ENERGIE_SITE_REFERENCE`. The bridge reads these from the process environment. Credentials are not passed as MCP tool arguments.
