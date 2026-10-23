@@ -79,6 +79,7 @@ The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol e
 | Tool | `get_invoice_statistics` | Aggregates invoice totals for a calendar year; requires credentials and site reference. |
 | Tool | `get_smart_pv_system_summary` | Reads allowlisted operational/steering status and PV totals; requires credentials and device ID. |
 | Tool | `get_smart_battery_status` | Read a linked battery's state of charge, status, update time and capacity. |
+| Tool | `get_smart_hvac_status` | Read smart HVAC activation and country availability without personal data. |
 | Tool | `get_account` | Requires credentials and a site reference; returns only `{"authenticated": true}` after a successful account request |
 | Tool | `list_sites` | Requires credentials; returns only the number of recognized delivery sites |
 | Resource | `frank-energie://capabilities` | Static description of capabilities |
@@ -362,6 +363,16 @@ Neither tool performs mutations.
 nonempty linked device ID. The response never echoes device IDs,
 trading settings or account metadata. A missing upstream battery
 returns `{"available": false}`. This tool is read-only.
+
+## Smart HVAC status
+
+`get_smart_hvac_status()` calls the authenticated upstream
+`smart_hvac_status()` method. It returns only `available`,
+`is_activated`, and `is_available_in_country`. When no smart HVAC
+enrollment is returned, `available` is false and the flags are null.
+An existing enrollment can also contain nullable flags. User IDs and
+registration timestamps are never included. The tool is read-only and
+does not change HVAC settings.
 
 ## Authentication
 
