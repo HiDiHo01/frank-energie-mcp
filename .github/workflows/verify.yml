@@ -27,6 +27,13 @@ jobs:
       - run: python -m compileall src
       - run: pytest -q
 
+      - name: Live anonymous API connectivity smoke test
+        env:
+          FRANK_ENERGIE_USERNAME: ""
+          FRANK_ENERGIE_PASSWORD: ""
+          FRANK_ENERGIE_SITE_REFERENCE: ""
+        run: python tests/live_api_connection.py
+
       - name: Live anonymous electricity price smoke test
         env:
           FRANK_ENERGIE_USERNAME: ""
