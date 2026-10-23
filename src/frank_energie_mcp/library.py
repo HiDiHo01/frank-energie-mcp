@@ -591,6 +591,41 @@ class FrankEnergieService:
         """Count linked smart solar systems without exposing device information."""
         return await self._linked_device_count("smart_pv_systems", "systems")
 
+    async def get_electric_vehicle_statistics(self) -> dict[str, int]:
+        """Count linked vehicles by reachability and smart charging capability."""
+        self._require_credentials()
+        async with self.bridge.session() as client:
+            data = await client.enode_vehicles()
+        if data is None:
+            return {
+                "vehicle_count": 0,
+                "reachable_count": 0,
+                "smart_capable_count": 0,
+                "smart_enabled_count": 0,
+            }
+        vehicles = getattr(data, "vehicles", None)
+        if not isinstance(vehicles, list):
+            raise ValueError("Unexpected electric vehicle collection.")
+        reachable_count = 0
+        smart_capable_count = 0
+        smart_enabled_count = 0
+        for vehicle in vehicles:
+            reachable = getattr(vehicle, "is_reachable", None)
+            capable = getattr(vehicle, "can_smart_charge", None)
+            settings = getattr(vehicle, "charge_settings", None)
+            enabled = getattr(settings, "is_smart_charging_enabled", None)
+            if any(type(flag) is not bool for flag in (reachable, capable, enabled)):
+                raise ValueError("Unexpected electric vehicle capability flags.")
+            reachable_count += int(reachable)
+            smart_capable_count += int(capable)
+            smart_enabled_count += int(enabled)
+        return {
+            "vehicle_count": len(vehicles),
+            "reachable_count": reachable_count,
+            "smart_capable_count": smart_capable_count,
+            "smart_enabled_count": smart_enabled_count,
+        }
+
     async def get_electric_vehicle_count(self) -> dict[str, int]:
         """Count linked Enode electric vehicles without exposing identifiers."""
         return await self._linked_device_count("enode_vehicles", "vehicles")
