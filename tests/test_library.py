@@ -101,6 +101,7 @@ async def test_server_registers_tools_resources_and_prompts(
         "get_smart_battery_session_statistics",
         "get_period_usage_and_costs",
         "get_ev_charger_statistics",
+        "get_monthly_cost_insights",
         "get_account",
         "list_sites",
     }
