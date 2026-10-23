@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 from typing import Any, Protocol, cast
 
@@ -28,7 +28,7 @@ class _AsyncFrankEnergie(Protocol):
     async def month_summary(self) -> Any:
         """Return the month summary."""
 
-    async def prices(self, start_date: datetime.date | None = None) -> Any:
+    async def prices(self, start_date: date | None = None) -> Any:
         """Return prices for the requested date range."""
 
     async def user_prices(self, start_date: date, end_date: date | None = None) -> Any:
