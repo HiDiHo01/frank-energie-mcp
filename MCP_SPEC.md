@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Sixteen read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Twenty-one read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -155,6 +155,24 @@ windows, charge cost, avoided discharge cost, and estimated savings.
 It is an idealized single-cycle model, without a load profile, grid
 fees, battery wear or export modeling; results may be negative.
 The battery power limits are approximated at whole-resolution windows.
+
+## Additional analytics contracts
+
+`get_negative_price_periods(day=None, resolution="PT15M",
+minimum_duration_minutes=15)` returns electricity periods strictly
+below zero. `get_price_trend(day=None, resolution="PT15M",
+stable_tolerance=0.005)` classifies the difference between the last
+and first available normalized total; its direction is `rising`,
+`falling`, `stable` or `insufficient_data`. It also reports gaps.
+`get_price_volatility` returns population standard deviation, spread,
+largest adjacent increase/decrease and mean absolute adjacent change;
+nonadjacent intervals are excluded from difference calculations.
+`get_price_statistics` returns count, mean, median, minimum, maximum,
+range, population standard deviation and linearly interpolated p25/p75.
+`compare_days(first_day, second_day, resolution="PT15M")` returns
+both days' statistics and second-minus-first mean differences for each
+energy type. Empty datasets produce null statistics; these functions
+do not impute missing prices.
 
 ## Authentication and upstream access
 
