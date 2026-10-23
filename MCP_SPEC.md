@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Thirty-four read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Thirty-five read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -48,6 +48,7 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_smart_battery_session_statistics` | `get_smart_battery_session_statistics(device_id, start_date, end_date)` | Authenticated session count and aggregate trading results |
 | `get_period_usage_and_costs` | `get_period_usage_and_costs(start_date)` | Authenticated billing-period usage and cost totals by energy category |
 | `get_ev_charger_statistics` | `get_ev_charger_statistics(start_date)` | Authenticated EV charger reachability and smart charging counts |
+| `get_monthly_cost_insights` | `get_monthly_cost_insights(month)` | Authenticated monthly expected and actual cost totals |
 | `get_account` | `get_account()` | After a successful authenticated account request, returns only `{"authenticated": true}`; account details are deliberately not exposed |
 | `list_sites` | `list_sites()` | `{"count": N}` for a recognized site collection; site identifiers and addresses are not exposed |
 
@@ -331,6 +332,17 @@ It returns nonnegative integer counts: `charger_count`,
 `smart_enabled_count`. Invalid boolean capability fields
 are rejected. Device IDs, intervention records, and raw
 charging settings are excluded. No upstream mutation is called.
+
+## Monthly cost insights contract
+
+`get_monthly_cost_insights(month)` accepts a strictly formatted
+`YYYY-MM` calendar month and requires credentials and a site
+reference. It delegates to upstream `month_insights` and
+returns `available`, `month`, and the seven allowlisted
+expected/actual cost fields. Absent upstream data produces
+`available=false`. Nonfinite values are rejected.
+Invoice identifiers, personal metadata and raw model data
+are excluded. This tool is read-only.
 
 ## Authentication and upstream access
 
