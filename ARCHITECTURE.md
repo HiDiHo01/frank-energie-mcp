@@ -144,6 +144,16 @@ general scheduling constraints. The battery estimate models only one
 idealized charge-before-discharge cycle. Neither tool guarantees actual
 bill savings or accounts for a household consumption profile.
 
+## Authenticated linked-device counts
+
+Three privacy-safe service methods delegate to existing read-only
+`python-frank-energie` endpoints for batteries, PV systems and vehicles.
+They enforce configured credentials before opening a managed upstream
+session, validate the expected typed collection field and return only
+a count. The MCP boundary maps exceptions to a generic client-facing
+error. Device identifiers and detailed configuration are deliberately
+excluded. Write-capable upstream methods remain unexposed.
+
 ## Authentication and privacy
 
 Public market-price tools work without configured credentials. Account/site operations require `FRANK_ENERGIE_USERNAME` and `FRANK_ENERGIE_PASSWORD`; account operations also require `FRANK_ENERGIE_SITE_REFERENCE`. The bridge reads these from the process environment. Credentials are not passed as MCP tool arguments.
