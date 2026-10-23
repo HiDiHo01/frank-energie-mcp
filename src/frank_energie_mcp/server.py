@@ -44,6 +44,24 @@ def create_server(service: FrankEnergieService | None = None) -> FastMCP:
         """Get the account data containing delivery sites."""
         return await energy_service.list_sites()
 
+    @server.resource("frank-energie://capabilities")
+    def capabilities() -> str:
+        """Describe available read-only MCP capabilities."""
+        return (
+            "Read-only Frank Energie market prices are available through "
+            "get_current_prices, get_today_prices, get_tomorrow_prices, "
+            "and get_gas_price. Account access requires authentication."
+        )
+
+    @server.prompt()
+    def summarize_energy_prices() -> str:
+        """Provide a reusable prompt for comparing market prices."""
+        return (
+            "Call get_today_prices and get_tomorrow_prices. "
+            "Compare available electricity and gas market prices, "
+            "include units and timestamps, and do not invent missing data."
+        )
+
     return server
 
 
