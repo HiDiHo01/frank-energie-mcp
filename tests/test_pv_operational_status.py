@@ -72,9 +72,7 @@ async def test_pv_operational_status_auth_and_id() -> None:
     """Reject unauthenticated requests and empty identifiers."""
     client = AsyncMock()
     with pytest.raises(RuntimeError, match="credentials"):
-        await service_for(client, authenticated=False).get_smart_pv_operational_status(
-            "device"
-        )
+        await service_for(client, authenticated=False).get_smart_pv_operational_status("device")
     with pytest.raises(ValueError, match="device_id"):
         await service_for(client).get_smart_pv_operational_status(" ")
     client.smart_pv_system_summary.assert_not_awaited()
