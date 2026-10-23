@@ -560,3 +560,11 @@ See [ARCHITECTURE.md](ARCHITECTURE.md), [MCP_SPEC.md](MCP_SPEC.md), [AI_POLICY.m
 `total_result`. The value is the upstream cumulative trading result,
 not a newly calculated profit or a guaranteed billing amount. Credentials
 are required; device identifiers and account details are not returned.
+
+## Smart PV financial result
+
+`get_smart_pv_financial_result(device_id)` delegates to upstream
+`smart_pv_system_summary()` and returns only `available`, `total_bonus`
+and `total_result`. Missing numeric values remain `null`. It does not
+return device or account identifiers, and does not compute financial
+results independently. Credentials are required.
