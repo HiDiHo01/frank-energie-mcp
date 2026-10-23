@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Thirty-seven read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Thirty-eight read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -51,6 +51,7 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_monthly_cost_insights` | `get_monthly_cost_insights(month)` | Authenticated monthly expected and actual cost totals |
 | `get_account_country` | `get_account_country()` | Authenticated two-letter account country code |
 | `get_smart_battery_fleet_statistics` | `get_smart_battery_fleet_statistics()` | Aggregate linked battery capacity and rated power |
+| `get_electric_vehicle_statistics` | `get_electric_vehicle_statistics()` | Authenticated vehicle reachability and smart charging counts |
 | `get_account` | `get_account()` | After a successful authenticated account request, returns only `{"authenticated": true}`; account details are deliberately not exposed |
 | `list_sites` | `list_sites()` | `{"count": N}` for a recognized site collection; site identifiers and addresses are not exposed |
 
@@ -365,6 +366,15 @@ in upstream units. Missing values are excluded, and totals
 without observations are null. Nonfinite or negative values
 are rejected. Device identifiers and configuration are excluded.
 No battery mutations are invoked.
+
+## Electric vehicle statistics contract
+
+`get_electric_vehicle_statistics()` requires credentials and
+delegates to upstream `enode_vehicles()`. It returns integer
+counts for linked, reachable, smart-charge-capable and
+smart-charging-enabled vehicles. Invalid boolean flags are
+rejected. Vehicle identifiers and settings are excluded.
+A site reference is not required. No upstream write is called.
 
 ## Authentication and upstream access
 
