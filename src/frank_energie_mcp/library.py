@@ -107,8 +107,10 @@ class FrankEnergieService:
 
     async def list_sites(self) -> Any:
         """Return the available sites."""
+        if not self.bridge.username or not self.bridge.password:
+            raise RuntimeError("Site access requires Frank Energie credentials.")
         async with self.bridge.session() as client:
-            return await client.user()
+            return await client.UserSites()
 
 
 
