@@ -82,6 +82,7 @@ The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol e
 | Tool | `get_smart_hvac_status` | Read smart HVAC activation and country availability without personal data. |
 | Tool | `get_daily_consumption_statistics` | Aggregate recorded daily consumption (kWh) over an inclusive date range. |
 | Tool | `get_smart_battery_session_statistics` | Aggregate trading-session results for one battery and date range. |
+| Tool | `get_period_usage_and_costs` | Read electricity, gas and feed-in usage/cost totals for a billing period. |
 | Tool | `get_account` | Requires credentials and a site reference; returns only `{"authenticated": true}` after a successful account request |
 | Tool | `list_sites` | Requires credentials; returns only the number of recognized delivery sites |
 | Resource | `frank-energie://capabilities` | Static description of capabilities |
@@ -405,6 +406,19 @@ and average are null. Device identifiers, trade indexes and
 individual sessions are excluded. These totals are sums of
 upstream session results, not an invoice or guaranteed savings.
 This tool is read-only and requires credentials.
+
+## Billing-period usage and costs
+
+`get_period_usage_and_costs(start_date)` delegates to upstream
+`period_usage_and_costs(site_reference, start_date)` with an ISO
+calendar date. It returns an `available` flag and a `categories`
+mapping with `electricity`, `gas`, and `feed_in`.
+Each available category contains `unit`, `usage_total`, and
+`costs_total` (numeric totals may be null). Missing categories
+remain null. Detailed usage items, upstream period identifiers
+and site references are excluded. This tool requires credentials
+and `FRANK_ENERGIE_SITE_REFERENCE`; it is read-only. The
+upstream billing-period totals are not reconstructed invoices.
 
 ## Authentication
 
