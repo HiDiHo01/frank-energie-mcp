@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Thirty-one read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Thirty-two read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -45,6 +45,7 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_smart_battery_status` | `get_smart_battery_status(device_id)` | Authenticated battery charge, status, update timestamp and capacity |
 | `get_smart_hvac_status` | `get_smart_hvac_status()` | Authenticated HVAC activation and country-availability flags |
 | `get_daily_consumption_statistics` | `get_daily_consumption_statistics(start_date, end_date)` | Authenticated daily kWh count, total and average over an inclusive range |
+| `get_smart_battery_session_statistics` | `get_smart_battery_session_statistics(device_id, start_date, end_date)` | Authenticated session count and aggregate trading results |
 | `get_account` | `get_account()` | After a successful authenticated account request, returns only `{"authenticated": true}`; account details are deliberately not exposed |
 | `list_sites` | `list_sites()` | `{"count": N}` for a recognized site collection; site identifiers and addresses are not exposed |
 
@@ -293,6 +294,18 @@ configured delivery-site reference. It returns `start_date`,
 Only upstream days present in the requested range are aggregated;
 missing days do not count as zero. User identifiers and individual
 readings are not returned. The operation is read-only.
+
+## Battery trading-session statistics contract
+
+`get_smart_battery_session_statistics(device_id, start_date, end_date)`
+requires credentials, a nonempty device ID, and an inclusive
+ordered date range no longer than 366 days. It returns
+`available`, `session_count`, `result_count`,
+`total_session_result` and `average_session_result`.
+Null session results are omitted from the aggregate; missing
+or empty results produce null total and average. Nonfinite
+results are rejected. Device identifiers and individual
+trading sessions are excluded. No upstream mutation is called.
 
 ## Authentication and upstream access
 
