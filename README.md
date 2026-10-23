@@ -28,6 +28,27 @@ Example client configuration (adapt the Python executable to the environment whe
 }
 ```
 
+## Windows: local Streamable HTTP
+
+Install Python 3.14 or newer, then open PowerShell:
+
+```powershell
+git clone https://github.com/HiDiHo01/frank-energie-mcp.git
+cd frank-energie-mcp
+git switch fix/fastmcp-bootstrap-and-ci
+py -3.14 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e ".[dev]"
+$env:FRANK_ENERGIE_MCP_TRANSPORT = "streamable-http"
+$env:FRANK_ENERGIE_MCP_HOST = "127.0.0.1"
+$env:FRANK_ENERGIE_MCP_PORT = "8000"
+python -m frank_energie_mcp
+```
+
+The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol endpoint, not a web page; opening it in a browser is not a valid tool test. Test with an MCP-compatible client. The process must remain running while connected.
+
+**Security:** The server binds to loopback only and does not provide inbound authentication. Do not expose this endpoint with router port forwarding, a public reverse proxy, or an unauthenticated tunnel. A ChatGPT connection requires a separately configured, authenticated HTTPS transport/tunnel and compatible ChatGPT custom MCP support; neither is established by these commands. Avoid including account credentials in URLs, scripts, or committed files.
+
 ## Implemented MCP registrations
 
 | Kind | Name | Current behavior |
