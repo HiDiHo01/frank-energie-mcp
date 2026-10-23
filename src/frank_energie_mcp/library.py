@@ -39,6 +39,9 @@ class _AsyncFrankEnergie(Protocol):
     async def UserSites(self) -> Any:  # noqa: N802 - upstream API method name
         """Return authenticated delivery sites."""
 
+    async def user_country(self) -> Any:
+        """Return the upstream authenticated user's country payload."""
+
     async def enode_chargers(self, site_reference: str, start_date: date) -> Any:
         """Return upstream charging devices for a site and date."""
 
@@ -655,6 +658,22 @@ class FrankEnergieService:
             "smart_capable_count": smart_capable_count,
             "smart_enabled_count": smart_enabled_count,
         }
+
+    async def get_account_country(self) -> dict[str, str]:
+        """Return only the account's ISO country code, without personal data."""
+        self._require_credentials()
+        async with self.bridge.session() as client:
+            account = await client.user_country()
+        country = getattr(account, "countryCode", None)
+        if (
+            not isinstance(country, str)
+            or len(country) != 2
+            or not country.isascii()
+            or not country.isalpha()
+            or country != country.upper()
+        ):
+            raise ValueError("Unexpected account country code.")
+        return {"country_code": country}
 
     async def get_monthly_cost_insights(self, month: str) -> dict[str, Any]:
         """Read upstream expected and actual monthly costs without account metadata."""
