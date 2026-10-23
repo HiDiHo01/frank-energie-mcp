@@ -89,6 +89,7 @@ The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol e
 | Tool | `get_smart_battery_fleet_statistics` | Aggregate linked battery capacity and rated charge/discharge power. |
 | Tool | `get_electric_vehicle_statistics` | Count linked vehicles, reachability and smart charging capability. |
 | Tool | `get_smart_pv_fleet_statistics` | Aggregate solar panel groups, declared panel counts and PV capacity. |
+| Tool | `get_current_month_cost_summary` | Read current-month expected/actual costs and meter-reading completeness. |
 | Tool | `get_account` | Requires credentials and a site reference; returns only `{"authenticated": true}` after a successful account request |
 | Tool | `list_sites` | Requires credentials; returns only the number of recognized delivery sites |
 | Resource | `frank-energie://capabilities` | Static description of capabilities |
@@ -490,6 +491,18 @@ are excluded from totals; when no groups report a value,
 the corresponding total is null. System IDs, connection
 numbers, inverter serial numbers and panel group IDs are
 excluded. The tool requires credentials and is read-only.
+
+## Current month cost summary
+
+`get_current_month_cost_summary()` delegates to upstream
+`month_summary(site_reference)` and returns `available`,
+expected and actual cost totals, expected costs per day,
+meter-reading completeness and the gas-exclusion flag.
+An absent summary returns `available=false`. Customer IDs,
+meter-reading dates and raw model data are excluded. Credentials
+and `FRANK_ENERGIE_SITE_REFERENCE` are required. Availability
+depends on the upstream API and may be affected by API schema
+changes. This operation is read-only.
 
 ## Authentication
 
