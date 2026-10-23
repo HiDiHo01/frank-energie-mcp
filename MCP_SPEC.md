@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Forty-two read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Forty-three read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -451,3 +451,12 @@ results. The device ID is an input only and is not echoed in the response.
 returns `{available: bool, total_bonus: number | null, total_result: number | null}`.
 It uses the upstream PV summary model and rejects nonfinite totals.
 Device identifiers are accepted only as input and are not echoed.
+
+## Monthly usage differences
+
+`get_monthly_usage_differences(month: str)` requires `YYYY-MM`, account
+credentials and a configured site reference. It returns `available`,
+`month` and `electricity`, `gas`, `feed_in` blocks. Each non-null block
+contains `unit`, `actualUsage`, `actualAverageUnitPrice`, `actualCosts`,
+`expectedUsage`, `expectedAverageUnitPrice` and `expectedCosts` directly
+from upstream `month_insights()`. No account identifiers are exposed.
