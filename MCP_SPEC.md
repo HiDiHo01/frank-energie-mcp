@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Twenty-four read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Twenty-six read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -38,6 +38,8 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_smart_battery_count` | `get_smart_battery_count()` | Authenticated `{"count": N}` from upstream `smart_batteries()` |
 | `get_smart_pv_system_count` | `get_smart_pv_system_count()` | Authenticated `{"count": N}` from upstream `smart_pv_systems()` |
 | `get_electric_vehicle_count` | `get_electric_vehicle_count()` | Authenticated `{"count": N}` from upstream `enode_vehicles()` |
+| `get_smart_feed_in_status` | `get_smart_feed_in_status()` | Authenticated, allowlisted boolean enrollment flags |
+| `get_contract_price_resolution_state` | `get_contract_price_resolution_state(connection_id)` | Authenticated, allowlisted contract resolution options |
 | `get_account` | `get_account()` | After a successful authenticated account request, returns only `{"authenticated": true}`; account details are deliberately not exposed |
 | `list_sites` | `list_sites()` | `{"count": N}` for a recognized site collection; site identifiers and addresses are not exposed |
 
@@ -226,6 +228,20 @@ in `{"count": N}`. They call the upstream `smart_batteries()`,
 A `None` upstream result is represented as zero; unexpected collection
 shapes raise an error. Raw device objects, IDs and account metadata
 are never serialized into MCP responses. These operations are read-only.
+
+## Additional authenticated status contracts
+
+`get_smart_feed_in_status()` returns `available` and four
+allowlisted boolean flags: `is_activated`, `has_accepted_terms`,
+`is_app_onboarding_available`, `is_available_in_country`. When the
+upstream response is null, flags are null and `available=false`.
+
+`get_contract_price_resolution_state(connection_id)` requires a
+nonempty connection ID, returns `available`, `active_option`,
+`available_options` and `is_change_request_possible`. A null
+upstream state yields `{"available": false}`. Neither endpoint
+returns user IDs, connection IDs or raw upstream account objects.
+No contract-changing API method is exposed.
 
 ## Authentication and upstream access
 
