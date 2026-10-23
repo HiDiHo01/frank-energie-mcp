@@ -68,6 +68,12 @@ class _AsyncFrankEnergie(Protocol):
     async def enode_vehicles(self) -> Any:
         """Return linked electric vehicles."""
 
+    async def user_smart_feed_in(self) -> Any:
+        """Return the current smart feed-in enrollment state."""
+
+    async def contract_price_resolution_state(self, connection_id: str | None = None) -> Any:
+        """Return the current contract price resolution state."""
+
     async def close(self) -> None:
         """Close the underlying HTTP session."""
 
@@ -508,6 +514,63 @@ class FrankEnergieService:
     async def get_electric_vehicle_count(self) -> dict[str, int]:
         """Count linked Enode electric vehicles without exposing identifiers."""
         return await self._linked_device_count("enode_vehicles", "vehicles")
+
+    def _require_credentials(self) -> None:
+        """Reject account-scoped requests without configured credentials."""
+        if not self.bridge.username or not self.bridge.password:
+            raise RuntimeError("Account access requires Frank Energie credentials.")
+
+    async def get_smart_feed_in_status(self) -> dict[str, bool | None]:
+        """Return allowlisted feed-in eligibility flags, never user identifiers."""
+        self._require_credentials()
+        async with self.bridge.session() as client:
+            state = await client.user_smart_feed_in()
+        if state is None:
+            return {
+                "available": False,
+                "is_activated": None,
+                "has_accepted_terms": None,
+                "is_app_onboarding_available": None,
+                "is_available_in_country": None,
+            }
+        fields = (
+            "is_activated",
+            "has_accepted_terms",
+            "is_app_onboarding_available",
+            "is_available_in_country",
+        )
+        flags = {key: getattr(state, key, None) for key in fields}
+        if any(type(value) is not bool for value in flags.values()):
+            raise ValueError("Unexpected smart feed-in response structure.")
+        return {"available": True, **flags}
+
+    async def get_contract_price_resolution_state(
+        self, connection_id: str
+    ) -> dict[str, Any]:
+        """Read contract resolution options without changing the contract."""
+        self._require_credentials()
+        if not isinstance(connection_id, str) or not connection_id.strip():
+            raise ValueError("connection_id must be a non-empty string.")
+        async with self.bridge.session() as client:
+            state = await client.contract_price_resolution_state(connection_id)
+        if state is None:
+            return {"available": False}
+        active = getattr(state, "active_option", None)
+        options = getattr(state, "available_options", None)
+        can_change = getattr(state, "is_change_request_possible", None)
+        if (
+            active is not None and not isinstance(active, str)
+            or not isinstance(options, list)
+            or not all(isinstance(option, str) for option in options)
+            or type(can_change) is not bool
+        ):
+            raise ValueError("Unexpected contract resolution response structure.")
+        return {
+            "available": True,
+            "active_option": active,
+            "available_options": options,
+            "is_change_request_possible": can_change,
+        }
 
     async def get_account(self) -> Any:
         """Return account data for the configured delivery site."""
