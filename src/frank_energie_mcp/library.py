@@ -587,6 +587,54 @@ class FrankEnergieService:
         """Count linked smart batteries without exposing device information."""
         return await self._linked_device_count("smart_batteries", "batteries")
 
+    async def get_smart_pv_fleet_statistics(self) -> dict[str, Any]:
+        """Aggregate linked PV panel groups and declared capacity without identifiers."""
+        self._require_credentials()
+        async with self.bridge.session() as client:
+            data = await client.smart_pv_systems()
+        if data is None:
+            systems: list[Any] = []
+        else:
+            systems = getattr(data, "systems", None)
+            if not isinstance(systems, list):
+                raise ValueError("Unexpected smart PV system collection.")
+        group_count = 0
+        panel_count = 0
+        panel_count_reported = 0
+        capacity_kwp = 0.0
+        capacity_reported = 0
+        for system in systems:
+            groups = getattr(system, "panel_groups", None)
+            if not isinstance(groups, list):
+                raise ValueError("Unexpected smart PV panel groups.")
+            group_count += len(groups)
+            for group in groups:
+                panels = getattr(group, "panel_count", None)
+                capacity = getattr(group, "capacity_kwp", None)
+                if panels is not None:
+                    if type(panels) is not int or panels < 0:
+                        raise ValueError("Unexpected smart PV panel count.")
+                    panel_count += panels
+                    panel_count_reported += 1
+                if capacity is not None:
+                    if (
+                        isinstance(capacity, bool)
+                        or not isinstance(capacity, (int, float))
+                        or not isfinite(capacity)
+                        or capacity < 0
+                    ):
+                        raise ValueError("Unexpected smart PV capacity.")
+                    capacity_kwp += float(capacity)
+                    capacity_reported += 1
+        return {
+            "system_count": len(systems),
+            "panel_group_count": group_count,
+            "panel_count_reported_groups": panel_count_reported,
+            "total_panel_count": panel_count if panel_count_reported else None,
+            "capacity_reported_groups": capacity_reported,
+            "total_capacity_kwp": capacity_kwp if capacity_reported else None,
+        }
+
     async def get_smart_pv_system_count(self) -> dict[str, int]:
         """Count linked smart solar systems without exposing device information."""
         return await self._linked_device_count("smart_pv_systems", "systems")
