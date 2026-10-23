@@ -91,6 +91,8 @@ async def test_server_registers_tools_resources_and_prompts(
         "get_smart_battery_count",
         "get_smart_pv_system_count",
         "get_electric_vehicle_count",
+        "get_smart_feed_in_status",
+        "get_contract_price_resolution_state",
         "get_account",
         "list_sites",
     }
