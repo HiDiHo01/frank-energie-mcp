@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..library import default_library_bridge
+from ..library import default_service
 from ..models import ToolResponse
 
 
@@ -31,9 +31,7 @@ def _extract_account_payload(data: Any) -> AccountResult:
 
 async def get_account() -> ToolResponse:
     """Return the account payload from the Frank Energie library."""
-    bridge = default_library_bridge()
-    async with bridge.session() as client:
-        data = await client.user()
+    data = await default_service().get_account()
 
     result = _extract_account_payload(data)
     return ToolResponse(status="ok", data=result)
