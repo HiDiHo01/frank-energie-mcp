@@ -52,9 +52,7 @@ async def test_battery_status_missing_and_invalid() -> None:
     """Represent absent devices and reject invalid upstream charge readings."""
     client = AsyncMock()
     client.smart_battery_details.return_value = None
-    assert await make_service(client).get_smart_battery_status("device") == {
-        "available": False
-    }
+    assert await make_service(client).get_smart_battery_status("device") == {"available": False}
     with pytest.raises(ValueError, match="device_id"):
         await make_service(client).get_smart_battery_status(" ")
     client.smart_battery_details.return_value = SimpleNamespace(
