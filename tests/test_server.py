@@ -40,7 +40,7 @@ async def test_current_prices_delegates_to_service() -> None:
 
     await server.call_tool("get_current_prices", {})
 
-    service.get_current_prices.assert_awaited_once_with()
+    service.get_current_prices.assert_awaited_once_with(resolution="PT15M")
 
 
 @pytest.mark.asyncio
@@ -147,3 +147,15 @@ async def test_unknown_sites_structure_is_rejected_without_leaking_data() -> Non
         rendered = str(exc)
     assert "private-site" not in rendered
     assert "Frank Energie request failed" in rendered
+
+
+@pytest.mark.asyncio
+async def test_mcp_price_resolution_parameter() -> None:
+    """Allow hourly resolution and reject unsupported values at the tool boundary."""
+    service = AsyncMock()
+    service.get_current_prices.return_value = {"electricity": None, "gas": None}
+    server = create_server(service)
+    await server.call_tool("get_current_prices", {"resolution": "PT60M"})
+    service.get_current_prices.assert_awaited_once_with(resolution="PT60M")
+    with pytest.raises(Exception):
+        await server.call_tool("get_current_prices", {"resolution": "PT30M"})
