@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import os
-from math import isfinite
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
+from math import isfinite
 from typing import Any, Literal, Protocol, cast
 from zoneinfo import ZoneInfo
 
@@ -15,12 +15,12 @@ from .optimization import (
     battery_savings,
     best_start,
     energy_cost,
+    price_statistics,
+    price_trend,
+    price_volatility,
     split_periods,
     threshold_periods,
     validated_series,
-    price_statistics,
-    price_volatility,
-    price_trend,
 )
 from .price_schemas import normalize_interval, normalize_market_prices
 
