@@ -552,3 +552,11 @@ See [ARCHITECTURE.md](ARCHITECTURE.md), [MCP_SPEC.md](MCP_SPEC.md), [AI_POLICY.m
 **External ChatGPT access:** Not production-ready yet. The built-in Streamable HTTP listener is **loopback-only and unauthenticated**. Do not expose it publicly or treat a TLS tunnel alone as sufficient authentication. A production deployment needs an HTTPS ingress with validated client authentication and authorization, restricted access to the upstream loopback service, rate limiting, request/body size limits, TLS certificate management, and documented token rotation. Verify that the intended ChatGPT MCP connector supports the chosen authentication flow before deployment. A reverse proxy or tunnel must not forward unauthenticated public requests to `/mcp`.
 
 **Release blockers:** Verify all CI checks on the exact release commit; review legacy unused models and modules; validate real MCP tool calls over both transports; test upstream timeouts, authentication failures, missing data, and time-zone boundaries; and document a rollback procedure. Do not describe the service as production-ready until these checks pass.
+
+## Smart battery trading result
+
+`get_smart_battery_trading_result(device_id)` reads the upstream
+`smart_battery_details()` summary and returns only `available` and
+`total_result`. The value is the upstream cumulative trading result,
+not a newly calculated profit or a guaranteed billing amount. Credentials
+are required; device identifiers and account details are not returned.
