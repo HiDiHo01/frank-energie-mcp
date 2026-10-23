@@ -81,6 +81,11 @@ class _AsyncFrankEnergie(Protocol):
     async def contract_price_resolution_state(self, connection_id: str | None = None) -> Any:
         """Return the current contract price resolution state."""
 
+    async def smart_battery_sessions(
+        self, device_id: str, start_date: date, end_date: date
+    ) -> Any:
+        """Return upstream trading sessions for a linked smart battery."""
+
     async def smart_battery_details(self, device_id: str) -> Any:
         """Return one linked smart battery detail model."""
 
@@ -726,6 +731,55 @@ class FrankEnergieService:
                 raise ValueError("Unexpected PV system total.")
             result[field] = float(value) if value is not None else None
         return result
+
+    async def get_smart_battery_session_statistics(
+        self, device_id: str, start_date: date, end_date: date
+    ) -> dict[str, Any]:
+        """Summarize a battery's trading sessions without revealing device data."""
+        self._require_credentials()
+        if not isinstance(device_id, str) or not device_id.strip():
+            raise ValueError("device_id must be a non-empty string.")
+        if (
+            not isinstance(start_date, date)
+            or isinstance(start_date, datetime)
+            or not isinstance(end_date, date)
+            or isinstance(end_date, datetime)
+            or end_date < start_date
+            or (end_date - start_date).days > 366
+        ):
+            raise ValueError("Provide an ordered date range of at most 366 days.")
+        async with self.bridge.session() as client:
+            data = await client.smart_battery_sessions(device_id, start_date, end_date)
+        if data is None:
+            return {
+                "available": False,
+                "session_count": 0,
+                "total_session_result": None,
+                "average_session_result": None,
+            }
+        sessions = getattr(data, "sessions", None)
+        if not isinstance(sessions, list):
+            raise ValueError("Unexpected battery sessions response structure.")
+        results: list[float] = []
+        for session in sessions:
+            result = getattr(session, "result", None)
+            if result is None:
+                continue
+            if (
+                isinstance(result, bool)
+                or not isinstance(result, (int, float))
+                or not isfinite(result)
+            ):
+                raise ValueError("Unexpected battery session result.")
+            results.append(float(result))
+        total = sum(results)
+        return {
+            "available": True,
+            "session_count": len(sessions),
+            "result_count": len(results),
+            "total_session_result": total if results else None,
+            "average_session_result": total / len(results) if results else None,
+        }
 
     async def get_smart_battery_status(self, device_id: str) -> dict[str, Any]:
         """Read a battery's current state without exposing identifiers or settings."""
