@@ -58,9 +58,7 @@ async def test_vehicle_statistics_missing_and_invalid() -> None:
     """Handle absent collections and reject malformed flags."""
     client = AsyncMock()
     client.enode_vehicles.return_value = None
-    assert (await make_service(client).get_electric_vehicle_statistics())[
-        "vehicle_count"
-    ] == 0
+    assert (await make_service(client).get_electric_vehicle_statistics())["vehicle_count"] == 0
     client.enode_vehicles.return_value = SimpleNamespace(
         vehicles=[
             SimpleNamespace(
