@@ -201,6 +201,16 @@ average per observed day. Raw readings and upstream account metadata
 never cross the MCP boundary. Credentials and a site reference are
 required; missing days are not fabricated as zero consumption.
 
+## Battery session aggregation
+
+The session statistics tool delegates to upstream
+`smart_battery_sessions(device_id, start_date, end_date)`.
+It aggregates only finite numeric per-session results, counting
+all sessions separately from those with reported results.
+Raw sessions, device IDs and trading metadata are not serialized
+into the MCP response. Date range and authentication are validated;
+no battery configuration is modified.
+
 ## Authentication and privacy
 
 Public market-price tools work without configured credentials. Account/site operations require `FRANK_ENERGIE_USERNAME` and `FRANK_ENERGIE_PASSWORD`; account operations also require `FRANK_ENERGIE_SITE_REFERENCE`. The bridge reads these from the process environment. Credentials are not passed as MCP tool arguments.
