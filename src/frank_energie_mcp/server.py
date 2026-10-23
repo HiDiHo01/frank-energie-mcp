@@ -311,6 +311,13 @@ def create_server(
         )
 
     @server.tool()
+    async def get_ev_charger_statistics(start_date: date) -> object:
+        """Count EV chargers, reachability and smart charging capabilities."""
+        return await safe_tool_call(
+            lambda: energy_service.get_ev_charger_statistics(start_date)
+        )
+
+    @server.tool()
     async def get_period_usage_and_costs(start_date: date) -> object:
         """Read upstream period electricity, gas and feed-in usage and costs."""
         return await safe_tool_call(
