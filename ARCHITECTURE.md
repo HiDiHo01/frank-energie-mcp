@@ -317,3 +317,9 @@ The default runtime is stdio. Optional Streamable HTTP binds only to `127.0.0.1`
 - Direct Home Assistant entity support or replication of the Home Assistant integration.
 - New GraphQL endpoints or direct API calls from the MCP layer.
 - Hidden background synchronization unrelated to MCP requests.
+
+## Battery trading result boundary
+
+The trading result tool reuses the upstream battery summary's
+`total_result` without recomputing session-level business logic. It
+exposes no account or device identifiers and performs no mutations.
