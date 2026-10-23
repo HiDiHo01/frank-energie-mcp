@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from math import isfinite
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -38,7 +39,7 @@ class _AsyncFrankEnergie(Protocol):
     async def UserSites(self) -> Any:  # noqa: N802 - upstream API method name
         """Return authenticated delivery sites."""
 
-    async def invoices(self) -> Any:
+    async def invoices(self, site_reference: str) -> Any:
         """Return invoice data."""
 
     async def month_summary(self) -> Any:
@@ -73,6 +74,9 @@ class _AsyncFrankEnergie(Protocol):
 
     async def contract_price_resolution_state(self, connection_id: str | None = None) -> Any:
         """Return the current contract price resolution state."""
+
+    async def smart_pv_system_summary(self, device_id: str) -> Any:
+        """Return one linked solar PV system summary."""
 
     async def close(self) -> None:
         """Close the underlying HTTP session."""
@@ -571,6 +575,65 @@ class FrankEnergieService:
             "available_options": options,
             "is_change_request_possible": can_change,
         }
+
+    async def get_invoice_statistics(self, year: int) -> dict[str, Any]:
+        """Aggregate invoice amounts for a year without returning invoice IDs."""
+        self._require_credentials()
+        if not self.bridge.site_reference:
+            raise RuntimeError("Invoice access requires FRANK_ENERGIE_SITE_REFERENCE.")
+        if isinstance(year, bool) or not isinstance(year, int) or not 2000 <= year <= 2100:
+            raise ValueError("year must be an integer between 2000 and 2100.")
+        async with self.bridge.session() as client:
+            invoices = await client.invoices(self.bridge.site_reference)
+        records = getattr(invoices, "all_periods_invoices", None)
+        if not isinstance(records, list):
+            raise ValueError("Unexpected invoice response structure.")
+        amounts: list[float] = []
+        for invoice in records:
+            start = getattr(invoice, "StartDate", None)
+            amount = getattr(invoice, "TotalAmount", None)
+            if not isinstance(start, datetime) or start.tzinfo is None:
+                raise ValueError("Unexpected invoice start date.")
+            if isinstance(amount, bool) or not isinstance(amount, (int, float)):
+                raise ValueError("Unexpected invoice amount.")
+            if not isfinite(amount):
+                raise ValueError("Invoice amount must be finite.")
+            if start.astimezone(ZoneInfo("Europe/Amsterdam")).year == year:
+                amounts.append(float(amount))
+        return {
+            "year": year,
+            "invoice_count": len(amounts),
+            "total_amount": sum(amounts),
+            "average_amount": sum(amounts) / len(amounts) if amounts else None,
+        }
+
+    async def get_smart_pv_system_summary(self, device_id: str) -> dict[str, Any]:
+        """Return only status and totals for a PV system, without device IDs."""
+        self._require_credentials()
+        if not isinstance(device_id, str) or not device_id.strip():
+            raise ValueError("device_id must be a non-empty string.")
+        async with self.bridge.session() as client:
+            summary = await client.smart_pv_system_summary(device_id)
+        if summary is None:
+            return {"available": False}
+        from enum import Enum
+
+        result: dict[str, Any] = {"available": True}
+        for field in ("operational_status", "steering_status"):
+            value = getattr(summary, field, None)
+            if not isinstance(value, (str, Enum)):
+                raise ValueError("Unexpected PV system status.")
+            result[field] = str(value.value if isinstance(value, Enum) else value)
+        for field in ("total_bonus", "total_result"):
+            value = getattr(summary, field, None)
+            if value is not None and (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not isfinite(value)
+            ):
+                raise ValueError("Unexpected PV system total.")
+            result[field] = float(value) if value is not None else None
+        return result
 
     async def get_account(self) -> Any:
         """Return account data for the configured delivery site."""
