@@ -6,7 +6,7 @@ import os
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, Literal, Protocol, cast
 from zoneinfo import ZoneInfo
 
@@ -102,6 +102,21 @@ class FrankEnergieService:
             )
         return normalize_market_prices(prices)
 
+    async def get_average_prices(
+        self, day: date | None = None, resolution: PriceResolution = "PT15M"
+    ) -> dict[str, Any]:
+        """Average available normalized total prices for an Amsterdam calendar day."""
+        requested_day = day or datetime.now(ZoneInfo("Europe/Amsterdam")).date()
+        async with self.bridge.session() as client:
+            prices = await client.prices(requested_day, resolution=resolution)
+        normalized = normalize_market_prices(prices)
+        return {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+            "electricity": _average_series(normalized["electricity"], requested_day),
+            "gas": _average_series(normalized["gas"], requested_day),
+        }
+
     async def get_tomorrow_prices(self, resolution: PriceResolution = "PT15M") -> Any:
         """Return tomorrow's prices."""
         tomorrow = datetime.now(ZoneInfo("Europe/Amsterdam")).date() + timedelta(days=1)
@@ -132,6 +147,50 @@ class FrankEnergieService:
             raise RuntimeError("Site access requires Frank Energie credentials.")
         async with self.bridge.session() as client:
             return await client.UserSites()
+
+
+def _average_series(intervals: list[dict[str, Any]], day: date) -> dict[str, Any]:
+    """Summarize observed intervals without imputing missing prices."""
+    local_zone = ZoneInfo("Europe/Amsterdam")
+    start = datetime(day.year, day.month, day.day, tzinfo=local_zone).astimezone(UTC)
+    next_day = day + timedelta(days=1)
+    end = datetime(
+        next_day.year, next_day.month, next_day.day, tzinfo=local_zone
+    ).astimezone(UTC)
+    ordered = sorted(
+        intervals, key=lambda interval: datetime.fromisoformat(interval["date_from"])
+    )
+    observed_seconds = 0.0
+    previous_end: datetime | None = None
+    for interval in ordered:
+        interval_start = datetime.fromisoformat(interval["date_from"]).astimezone(UTC)
+        interval_end = datetime.fromisoformat(interval["date_till"]).astimezone(UTC)
+        if interval_start < start or interval_end > end:
+            raise ValueError("Price interval is outside the requested calendar day.")
+        if previous_end is not None and interval_start < previous_end:
+            raise ValueError("Overlapping or duplicate price intervals.")
+        observed_seconds += (interval_end - interval_start).total_seconds()
+        previous_end = interval_end
+
+    day_seconds = (end - start).total_seconds()
+    return {
+        "average_total": (
+            sum(float(interval["total"]) for interval in ordered) / len(ordered)
+            if ordered
+            else None
+        ),
+        "interval_count": len(ordered),
+        "first_interval": ordered[0]["date_from"] if ordered else None,
+        "last_interval": ordered[-1]["date_till"] if ordered else None,
+        "coverage_seconds": int(observed_seconds),
+        "expected_seconds": int(day_seconds),
+        "complete": bool(ordered) and observed_seconds == day_seconds,
+        "status": (
+            "empty"
+            if not ordered
+            else "complete" if observed_seconds == day_seconds else "incomplete"
+        ),
+    }
 
 
 def _current_price(series: Any) -> dict[str, Any] | None:
