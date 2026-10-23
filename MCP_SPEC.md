@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Thirty-two read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Thirty-three read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -46,6 +46,7 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_smart_hvac_status` | `get_smart_hvac_status()` | Authenticated HVAC activation and country-availability flags |
 | `get_daily_consumption_statistics` | `get_daily_consumption_statistics(start_date, end_date)` | Authenticated daily kWh count, total and average over an inclusive range |
 | `get_smart_battery_session_statistics` | `get_smart_battery_session_statistics(device_id, start_date, end_date)` | Authenticated session count and aggregate trading results |
+| `get_period_usage_and_costs` | `get_period_usage_and_costs(start_date)` | Authenticated billing-period usage and cost totals by energy category |
 | `get_account` | `get_account()` | After a successful authenticated account request, returns only `{"authenticated": true}`; account details are deliberately not exposed |
 | `list_sites` | `list_sites()` | `{"count": N}` for a recognized site collection; site identifiers and addresses are not exposed |
 
@@ -306,6 +307,19 @@ Null session results are omitted from the aggregate; missing
 or empty results produce null total and average. Nonfinite
 results are rejected. Device identifiers and individual
 trading sessions are excluded. No upstream mutation is called.
+
+## Billing-period usage and costs contract
+
+`get_period_usage_and_costs(start_date)` requires credentials,
+a configured delivery-site reference, and an ISO calendar date.
+It returns `available`, `start_date`, and when available
+`categories` containing `electricity`, `gas`, and `feed_in`
+with `unit`, `usage_total`, and `costs_total`.
+Missing categories are null; missing periods return
+`{"available": false, "start_date": "..."}`.
+Nonfinite totals and invalid units are rejected. Raw period
+identifiers, individual usage items and customer data are omitted.
+No upstream write operation is invoked.
 
 ## Authentication and upstream access
 
