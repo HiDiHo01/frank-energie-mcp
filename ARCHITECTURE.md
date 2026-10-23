@@ -221,6 +221,15 @@ calculations, and does not serialize raw usage items, period IDs
 or customer identifiers. Credentials and a site reference are
 required. The operation is read-only.
 
+## EV charger statistics boundary
+
+The EV charger tool delegates to upstream
+`enode_chargers(site_reference, start_date)` and counts
+validated charger capability flags. It does not serialize
+charger identifiers, intervention details or charging settings,
+and does not invoke upstream charging mutations. Credentials
+and a site reference are required.
+
 ## Authentication and privacy
 
 Public market-price tools work without configured credentials. Account/site operations require `FRANK_ENERGIE_USERNAME` and `FRANK_ENERGIE_PASSWORD`; account operations also require `FRANK_ENERGIE_SITE_REFERENCE`. The bridge reads these from the process environment. Credentials are not passed as MCP tool arguments.
