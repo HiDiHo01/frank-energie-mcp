@@ -806,6 +806,38 @@ class FrankEnergieService:
             raise ValueError("Unexpected account country code.")
         return {"country_code": country}
 
+    async def get_current_month_cost_summary(self) -> dict[str, Any]:
+        """Return upstream current-month cost totals without account identifiers."""
+        self._require_credentials()
+        if not self.bridge.site_reference:
+            raise RuntimeError("Month summary requires FRANK_ENERGIE_SITE_REFERENCE.")
+        async with self.bridge.session() as client:
+            summary = await client.month_summary(self.bridge.site_reference)
+        if summary is None:
+            return {"available": False}
+        fields = (
+            "actualCostsUntilLastMeterReadingDate",
+            "expectedCostsUntilLastMeterReadingDate",
+            "expectedCosts",
+            "expectedCostsPerDay",
+            "meterReadingDayCompleteness",
+        )
+        result: dict[str, Any] = {"available": True}
+        for field in fields:
+            value = getattr(summary, field, None)
+            if value is not None and (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not isfinite(value)
+            ):
+                raise ValueError("Unexpected current month summary value.")
+            result[field] = float(value) if value is not None else None
+        excluded = getattr(summary, "gasExcluded", None)
+        if excluded is not None and type(excluded) is not bool:
+            raise ValueError("Unexpected current month gas exclusion flag.")
+        result["gas_excluded"] = excluded
+        return result
+
     async def get_monthly_cost_insights(self, month: str) -> dict[str, Any]:
         """Read upstream expected and actual monthly costs without account metadata."""
         self._require_credentials()
