@@ -39,3 +39,39 @@ async def test_current_prices_delegates_to_service() -> None:
     await server.call_tool("get_current_prices", {})
 
     service.get_current_prices.assert_awaited_once_with()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "tool_name,service_method",
+    [
+        ("get_current_prices", "get_current_prices"),
+        ("get_today_prices", "get_today_prices"),
+        ("get_tomorrow_prices", "get_tomorrow_prices"),
+        ("get_gas_price", "get_gas_price"),
+        ("get_account", "get_account"),
+        ("list_sites", "list_sites"),
+    ],
+)
+async def test_mcp_error_never_exposes_upstream_secrets(
+    tool_name: str, service_method: str
+) -> None:
+    """The serialized MCP tool response must not include upstream exception text."""
+    secret = "fake-token-DO-NOT-EXPOSE"
+    password = "fake-password-DO-NOT-EXPOSE"
+    customer = "customer@example.invalid"
+    service = AsyncMock()
+    getattr(service, service_method).side_effect = RuntimeError(
+        f"Authorization: Bearer {secret}; password={password}; email={customer}"
+    )
+    server = create_server(service)
+
+    try:
+        response = await server.call_tool(tool_name, {})
+        rendered = str(response)
+    except Exception as exc:
+        rendered = str(exc)
+
+    for sensitive in (secret, password, customer):
+        assert sensitive not in rendered
+    assert "Frank Energie request failed" in rendered
