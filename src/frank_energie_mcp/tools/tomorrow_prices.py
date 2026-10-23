@@ -17,8 +17,6 @@ class TomorrowPricesResult:
     message: str
     source: str = "python-frank-energie"
 
-
-
 def _extract_tomorrow_prices_payload(data: Any) -> TomorrowPricesResult:
     """Convert library data into the MCP response model.
 
