@@ -156,6 +156,26 @@ efficiency, and no standing charges, battery degradation, export
 restrictions, household demand profile or dynamic power throttling.
 Do not use it as a guaranteed savings forecast.
 
+## Additional daily price analytics
+
+The existing `get_price_threshold_periods`, `get_best_split_periods`
+and `calculate_battery_savings` remain available; they are not
+registered twice. Five further tools are available:
+
+| Tool | Behavior |
+| --- | --- |
+| `get_negative_price_periods` | Contiguous electricity intervals strictly below zero, with configurable minimum duration |
+| `get_price_trend` | First-to-last available price change classified as rising, falling or stable with an absolute tolerance |
+| `get_price_volatility` | Population standard deviation, range and changes between adjacent available intervals |
+| `compare_days` | Compares price distributions on two dates and returns the second-minus-first mean difference |
+| `get_price_statistics` | Mean, median, minimum, maximum, range, population standard deviation and interpolated 25th/75th percentiles |
+
+All operations use normalized public `total` values, with separate
+electricity and gas results except negative-price periods, which apply
+only to electricity. Empty data returns null statistics; trend results
+also report whether any gaps exist. Comparison statistics describe
+available intervals, not guaranteed complete-day coverage.
+
 ## Authentication
 
 Account and delivery-site tools use the existing upstream `python-frank-energie` login method. Configure the server process with `FRANK_ENERGIE_USERNAME` and `FRANK_ENERGIE_PASSWORD`; set `FRANK_ENERGIE_SITE_REFERENCE` for `get_account`. Both credentials must be provided together. Missing credentials or site references cause descriptive errors before an account request is sent. Avoid putting credentials in repository files, command-line arguments, logs or screenshots. The server currently logs in for each managed upstream session and closes the client after each request. Token persistence, renewal across requests and credential rotation have not been validated.
