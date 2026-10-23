@@ -174,6 +174,15 @@ objects. The PV summary tool delegates to
 numeric totals. Both require credentials and return no identifying
 account or device metadata. These tools are read-only.
 
+## Battery detail read path
+
+The battery status tool delegates to upstream
+`smart_battery_details(device_id)` and extracts only a validated
+state-of-charge percentage, status, last-update timestamp and
+capacity. Device identifiers, trading configuration and raw
+upstream models are never returned. Credentials are required,
+and no upstream mutation is exposed.
+
 ## Authentication and privacy
 
 Public market-price tools work without configured credentials. Account/site operations require `FRANK_ENERGIE_USERNAME` and `FRANK_ENERGIE_PASSWORD`; account operations also require `FRANK_ENERGIE_SITE_REFERENCE`. The bridge reads these from the process environment. Credentials are not passed as MCP tool arguments.
