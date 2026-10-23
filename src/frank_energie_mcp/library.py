@@ -117,6 +117,47 @@ class FrankEnergieService:
             "gas": _average_series(normalized["gas"], requested_day),
         }
 
+    async def get_lowest_price(
+        self, day: date | None = None, resolution: PriceResolution = "PT15M"
+    ) -> dict[str, Any]:
+        """Return the lowest available total-price interval for each energy type."""
+        return await self._get_extreme_prices(day, resolution, highest=False)
+
+    async def get_highest_price(
+        self, day: date | None = None, resolution: PriceResolution = "PT15M"
+    ) -> dict[str, Any]:
+        """Return the highest available total-price interval for each energy type."""
+        return await self._get_extreme_prices(day, resolution, highest=True)
+
+    async def _get_extreme_prices(
+        self, day: date | None, resolution: PriceResolution, *, highest: bool
+    ) -> dict[str, Any]:
+        """Select extreme intervals from normalized public price records."""
+        requested_day = day or datetime.now(ZoneInfo("Europe/Amsterdam")).date()
+        async with self.bridge.session() as client:
+            prices = await client.prices(requested_day, resolution=resolution)
+        normalized = normalize_market_prices(prices)
+        result: dict[str, Any] = {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+        }
+        for energy in ("electricity", "gas"):
+            intervals = normalized[energy]
+            coverage = _average_series(intervals, requested_day)
+            selected = (
+                (max if highest else min)(intervals, key=lambda entry: entry["total"])
+                if intervals
+                else None
+            )
+            result[energy] = {
+                "price": selected,
+                "interval_count": coverage["interval_count"],
+                "coverage_seconds": coverage["coverage_seconds"],
+                "expected_seconds": coverage["expected_seconds"],
+                "status": coverage["status"],
+            }
+        return result
+
     async def get_tomorrow_prices(self, resolution: PriceResolution = "PT15M") -> Any:
         """Return tomorrow's prices."""
         tomorrow = datetime.now(ZoneInfo("Europe/Amsterdam")).date() + timedelta(days=1)
