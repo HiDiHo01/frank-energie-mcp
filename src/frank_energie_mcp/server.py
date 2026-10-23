@@ -318,6 +318,13 @@ def create_server(
         )
 
     @server.tool()
+    async def get_monthly_cost_insights(month: str) -> object:
+        """Get upstream monthly expected and actual costs without customer metadata."""
+        return await safe_tool_call(
+            lambda: energy_service.get_monthly_cost_insights(month)
+        )
+
+    @server.tool()
     async def get_period_usage_and_costs(start_date: date) -> object:
         """Read upstream period electricity, gas and feed-in usage and costs."""
         return await safe_tool_call(
