@@ -40,9 +40,10 @@ async def test_today_prices_uses_single_date(
 
 @pytest.mark.asyncio
 async def test_sites_uses_upstream_user_sites(
-    service: FrankEnergieService, client: AsyncMock
+    client: AsyncMock
 ) -> None:
     """Ensure delivery sites are requested through the dedicated endpoint."""
+    service = FrankEnergieService(FrankEnergieLibraryBridge(factory=lambda: client, username="test@example.invalid", password="dummy-test-password"))
     assert await service.list_sites() == {"sites": []}
     client.UserSites.assert_awaited_once_with()
     client.close.assert_awaited_once()
@@ -70,9 +71,7 @@ async def test_server_registers_tools_resources_and_prompts(
 
 
 @pytest.mark.asyncio
-async def test_gas_prices_uses_single_date(
-    service: FrankEnergieService, client: AsyncMock
-) -> None:
+async def test_gas_prices_uses_single_date(service: FrankEnergieService, client: AsyncMock) -> None:
     """Prevent regression to the unsupported two-date API call."""
     client.prices.return_value = SimpleNamespace(gas=SimpleNamespace(current_hour=None))
     assert await service.get_gas_price() is None
