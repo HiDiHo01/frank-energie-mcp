@@ -24,6 +24,16 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_highest_price` | `get_highest_price(day, resolution)` | Maximum total interval for each energy type, with coverage metadata. |
 | `get_lowest_period` | `get_lowest_period(period_minutes, day, resolution)` | Cheapest uninterrupted fixed-duration window for electricity and gas, selected by arithmetic mean of normalized `total`. |
 | `get_highest_period` | `get_highest_period(period_minutes, day, resolution)` | Most expensive uninterrupted fixed-duration window, with the same response contract. |
+| `get_best_start_time` | `get_best_start_time(duration_minutes, day, resolution, earliest_start, latest_end)` | Per-energy cheapest uninterrupted window or `null` |
+| `calculate_energy_cost` | `calculate_energy_cost(power_kw, duration_minutes, start_time, resolution)` | Electricity `status`, `cost`, `energy_kwh` |
+| `get_price_threshold_periods` | `get_price_threshold_periods(threshold, below, minimum_duration_minutes, day, resolution)` | Per-energy arrays of qualifying periods |
+| `get_negative_price_periods` | `get_negative_price_periods(day, resolution, minimum_duration_minutes)` | Electricity-only array of negative-price periods |
+| `get_price_trend` | `get_price_trend(day, resolution, stable_tolerance)` | Per-energy direction, change and gap indicator |
+| `get_price_volatility` | `get_price_volatility(day, resolution)` | Per-energy dispersion and adjacent changes |
+| `compare_days` | `compare_days(first_day, second_day, resolution)` | Two days of per-energy statistics and mean differences |
+| `get_best_split_periods` | `get_best_split_periods(total_minutes, minimum_block_minutes, day, resolution)` | Per-energy selected blocks and status |
+| `calculate_battery_savings` | `calculate_battery_savings(capacity_kwh, charge_power_kw, discharge_power_kw, round_trip_efficiency, day, resolution)` | Electricity one-cycle estimate and assumptions |
+| `get_price_statistics` | `get_price_statistics(day, resolution)` | Per-energy descriptive statistics |
 | `get_gas_price` | `get_gas_price(resolution)` | Normalized active gas interval or `null` |
 | `get_account` | `get_account()` | After a successful authenticated account request, returns only `{"authenticated": true}`; account details are deliberately not exposed |
 | `list_sites` | `list_sites()` | `{"count": N}` for a recognized site collection; site identifiers and addresses are not exposed |
@@ -173,6 +183,36 @@ range, population standard deviation and linearly interpolated p25/p75.
 both days' statistics and second-minus-first mean differences for each
 energy type. Empty datasets produce null statistics; these functions
 do not impute missing prices.
+
+## Parameter and response reference
+
+- `day` defaults to today's calendar date in `Europe/Amsterdam`;
+  `first_day` and `second_day` are required ISO calendar dates.
+- `resolution` is `PT15M` (15-minute bins) or `PT60M` (hourly bins).
+  Window durations must be positive multiples of that bin size.
+- `earliest_start`, `latest_end`, and `start_time` require timezone-aware
+  ISO timestamps. A requested cost window must fit within one local day.
+- `below=true` means strictly less than the threshold; `below=false`
+  means strictly greater. Negative-price periods are strictly below zero.
+- `stable_tolerance` is a nonnegative absolute difference in the upstream
+  price unit. Trend classification compares the first and last *available*
+  interval, not a fitted regression slope.
+- `get_price_statistics` uses population standard deviation and linearly
+  interpolated p25/p75. Missing datasets return `count=0` and null
+  descriptive values.
+- `get_price_volatility` only calculates changes between immediately
+  adjacent price intervals. Gaps do not contribute changes.
+- `get_best_split_periods` uses cheapest-first, fixed-size nonoverlapping
+  blocks; `total_minutes` must be divisible by `minimum_block_minutes`.
+  This heuristic is not a general constrained scheduling optimizer.
+- `calculate_battery_savings` assumes one charge-before-discharge cycle
+  and simplified full-bin power constraints. The response is an estimate,
+  not a guaranteed bill saving.
+
+For all daily analytics, electricity and gas prices have different physical
+units; their numeric results should not be combined. The normalized `total`
+comes from upstream data. The server does not independently derive taxes,
+markups or supplier-specific billing terms.
 
 ## Authentication and upstream access
 
