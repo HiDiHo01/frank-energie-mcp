@@ -239,6 +239,14 @@ preserving nullable values and rejecting nonfinite amounts.
 It does not serialize invoice IDs, account identifiers or
 meter-reading timestamps and performs no mutations.
 
+## Account country boundary
+
+The account country tool uses upstream `user_country()` and
+allowlists only a validated two-letter country code. It does
+not expose the upstream Me payload, user ID or email. It
+requires credentials but not a site reference and performs
+no mutations.
+
 ## Authentication and privacy
 
 Public market-price tools work without configured credentials. Account/site operations require `FRANK_ENERGIE_USERNAME` and `FRANK_ENERGIE_PASSWORD`; account operations also require `FRANK_ENERGIE_SITE_REFERENCE`. The bridge reads these from the process environment. Credentials are not passed as MCP tool arguments.
