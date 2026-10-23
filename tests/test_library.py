@@ -8,7 +8,11 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from frank_energie_mcp.library import FrankEnergieLibraryBridge, FrankEnergieService
+from frank_energie_mcp.library import (
+    FrankEnergieLibraryBridge,
+    FrankEnergieService,
+    PriceResolution,
+)
 from frank_energie_mcp.server import create_server
 
 
@@ -254,7 +258,7 @@ async def test_current_prices_prefers_api_per_unit_over_optional_unit(
 @pytest.mark.asyncio
 @pytest.mark.parametrize("resolution", ["PT15M", "PT60M"])
 async def test_requested_resolution_reaches_upstream(
-    service: FrankEnergieService, client: AsyncMock, resolution: str
+    service: FrankEnergieService, client: AsyncMock, resolution: PriceResolution
 ) -> None:
     """Forward the requested resolution unchanged to the upstream library."""
     await service.get_today_prices(resolution=resolution)
