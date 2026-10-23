@@ -134,13 +134,13 @@ async def test_current_prices_selects_upstream_active_records(
 
     result = await service.get_current_prices()
 
-    assert result["electricity"] == {
-        "date_from": start.isoformat(),
-        "date_till": (start + timedelta(minutes=15)).isoformat(),
-        "total": 0.25,
-        "unit": "kWh",
-        "energy_type": "electricity",
-    }
+    assert datetime.fromisoformat(result["electricity"]["date_from"]) == start
+    assert datetime.fromisoformat(result["electricity"]["date_till"]) == start + timedelta(
+        minutes=15
+    )
+    assert result["electricity"]["total"] == 0.25
+    assert result["electricity"]["unit"] == "kWh"
+    assert result["electricity"]["energy_type"] == "electricity"
     assert result["gas"] is None
     client.close.assert_awaited_once()
 
