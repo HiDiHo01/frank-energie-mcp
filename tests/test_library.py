@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
@@ -73,7 +74,8 @@ async def test_gas_prices_uses_single_date(
     service: FrankEnergieService, client: AsyncMock
 ) -> None:
     """Prevent regression to the unsupported two-date API call."""
-    await service.get_gas_price()
+    client.prices.return_value = SimpleNamespace(gas=SimpleNamespace(current_hour=None))
+    assert await service.get_gas_price() is None
     assert len(client.prices.await_args.args) == 1
     assert isinstance(client.prices.await_args.args[0], date)
     client.close.assert_awaited_once()
@@ -98,4 +100,35 @@ async def test_session_closes_after_upstream_failure(
     client.prices.side_effect = RuntimeError("Simulated upstream failure")
     with pytest.raises(RuntimeError, match="Simulated upstream failure"):
         await service.get_today_prices()
+    client.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_current_prices_selects_upstream_active_records(
+    service: FrankEnergieService, client: AsyncMock
+) -> None:
+    """Return the upstream active price instead of the full day's series."""
+    start = datetime.now(UTC)
+    active = SimpleNamespace(
+        date_from=start,
+        date_till=start + timedelta(minutes=15),
+        total=0.25,
+        unit="kWh",
+        energy_type="electricity",
+    )
+    client.prices.return_value = SimpleNamespace(
+        electricity=SimpleNamespace(current_hour=active),
+        gas=SimpleNamespace(current_hour=None),
+    )
+
+    result = await service.get_current_prices()
+
+    assert result["electricity"] == {
+        "date_from": start.isoformat(),
+        "date_till": (start + timedelta(minutes=15)).isoformat(),
+        "total": 0.25,
+        "unit": "kWh",
+        "energy_type": "electricity",
+    }
+    assert result["gas"] is None
     client.close.assert_awaited_once()
