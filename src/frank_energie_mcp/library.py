@@ -6,6 +6,7 @@ from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+import os
 from typing import Any, AsyncIterator, Protocol, cast
 from zoneinfo import ZoneInfo
 
@@ -47,12 +48,17 @@ class FrankEnergieLibraryBridge:
     """
 
     factory: Callable[[], _AsyncFrankEnergie]
+    username: str | None = None
+    password: str | None = None
+    site_reference: str | None = None
 
     @asynccontextmanager
     async def session(self) -> AsyncIterator[_AsyncFrankEnergie]:
         """Create a managed Frank Energie client session."""
         client = self.factory()
         try:
+            if self.username is not None and self.password is not None:
+                await client.login(self.username, self.password)
             yield client
         finally:
             await client.close()
@@ -91,8 +97,13 @@ class FrankEnergieService:
         return _current_price(prices.gas)
 
     async def get_account(self) -> Any:
-        """Return the current account data."""
-        raise RuntimeError("Account retrieval requires an authenticated client and site reference.")
+        """Return account data for the configured delivery site."""
+        if not self.bridge.site_reference:
+            raise RuntimeError("Account access requires FRANK_ENERGIE_SITE_REFERENCE.")
+        if not self.bridge.username or not self.bridge.password:
+            raise RuntimeError("Account access requires Frank Energie credentials.")
+        async with self.bridge.session() as client:
+            return await client.user(self.bridge.site_reference)
 
     async def list_sites(self) -> Any:
         """Return the available sites."""
@@ -113,7 +124,16 @@ def default_library_bridge() -> FrankEnergieLibraryBridge:
 
         return cast(_AsyncFrankEnergie, FrankEnergie())
 
-    return FrankEnergieLibraryBridge(factory=_factory)
+    username = os.environ.get("FRANK_ENERGIE_USERNAME") or None
+    password = os.environ.get("FRANK_ENERGIE_PASSWORD") or None
+    if (username is None) != (password is None):
+        raise ValueError("Both FRANK_ENERGIE_USERNAME and FRANK_ENERGIE_PASSWORD are required.")
+    return FrankEnergieLibraryBridge(
+        factory=_factory,
+        username=username,
+        password=password,
+        site_reference=os.environ.get("FRANK_ENERGIE_SITE_REFERENCE") or None,
+    )
 
 
 
