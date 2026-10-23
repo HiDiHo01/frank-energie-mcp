@@ -75,6 +75,9 @@ class _AsyncFrankEnergie(Protocol):
     async def contract_price_resolution_state(self, connection_id: str | None = None) -> Any:
         """Return the current contract price resolution state."""
 
+    async def smart_battery_details(self, device_id: str) -> Any:
+        """Return one linked smart battery detail model."""
+
     async def smart_pv_system_summary(self, device_id: str) -> Any:
         """Return one linked solar PV system summary."""
 
@@ -634,6 +637,46 @@ class FrankEnergieService:
                 raise ValueError("Unexpected PV system total.")
             result[field] = float(value) if value is not None else None
         return result
+
+    async def get_smart_battery_status(self, device_id: str) -> dict[str, Any]:
+        """Read a battery's current state without exposing identifiers or settings."""
+        self._require_credentials()
+        if not isinstance(device_id, str) or not device_id.strip():
+            raise ValueError("device_id must be a non-empty string.")
+        async with self.bridge.session() as client:
+            details = await client.smart_battery_details(device_id)
+        if details is None:
+            return {"available": False}
+        summary = getattr(details, "smart_battery_summary", None)
+        battery = getattr(details, "smart_battery", None)
+        if summary is None or battery is None:
+            raise ValueError("Unexpected smart battery detail response.")
+        from enum import Enum
+
+        charge = getattr(summary, "last_known_state_of_charge", None)
+        status = getattr(summary, "last_known_status", None)
+        updated = getattr(summary, "last_update", None)
+        capacity = getattr(battery, "capacity", None)
+        if isinstance(charge, bool) or not isinstance(charge, int) or not 0 <= charge <= 100:
+            raise ValueError("Unexpected battery state of charge.")
+        if not isinstance(status, (str, Enum)):
+            raise ValueError("Unexpected battery status.")
+        if not isinstance(updated, datetime) or updated.tzinfo is None:
+            raise ValueError("Unexpected battery update time.")
+        if capacity is not None and (
+            isinstance(capacity, bool)
+            or not isinstance(capacity, (int, float))
+            or not isfinite(capacity)
+            or capacity < 0
+        ):
+            raise ValueError("Unexpected battery capacity.")
+        return {
+            "available": True,
+            "state_of_charge_percent": charge,
+            "status": str(status.value if isinstance(status, Enum) else status),
+            "last_update": updated.isoformat(),
+            "capacity_kwh": float(capacity) if capacity is not None else None,
+        }
 
     async def get_account(self) -> Any:
         """Return account data for the configured delivery site."""
