@@ -50,9 +50,7 @@ async def test_pv_financial_result_absent_and_partial() -> None:
         "total_bonus": None,
         "total_result": None,
     }
-    client.smart_pv_system_summary.return_value = SimpleNamespace(
-        total_bonus=None, total_result=0
-    )
+    client.smart_pv_system_summary.return_value = SimpleNamespace(total_bonus=None, total_result=0)
     assert await make_service(client).get_smart_pv_financial_result("device") == {
         "available": True,
         "total_bonus": None,
