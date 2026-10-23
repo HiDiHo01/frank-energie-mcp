@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Thirty-eight read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Thirty-nine read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -52,6 +52,7 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_account_country` | `get_account_country()` | Authenticated two-letter account country code |
 | `get_smart_battery_fleet_statistics` | `get_smart_battery_fleet_statistics()` | Aggregate linked battery capacity and rated power |
 | `get_electric_vehicle_statistics` | `get_electric_vehicle_statistics()` | Authenticated vehicle reachability and smart charging counts |
+| `get_smart_pv_fleet_statistics` | `get_smart_pv_fleet_statistics()` | Aggregate PV panel group counts and declared capacity |
 | `get_account` | `get_account()` | After a successful authenticated account request, returns only `{"authenticated": true}`; account details are deliberately not exposed |
 | `list_sites` | `list_sites()` | `{"count": N}` for a recognized site collection; site identifiers and addresses are not exposed |
 
@@ -375,6 +376,17 @@ counts for linked, reachable, smart-charge-capable and
 smart-charging-enabled vehicles. Invalid boolean flags are
 rejected. Vehicle identifiers and settings are excluded.
 A site reference is not required. No upstream write is called.
+
+## Smart PV fleet statistics contract
+
+`get_smart_pv_fleet_statistics()` requires credentials and
+delegates to upstream `smart_pv_systems()`. It returns system
+and panel-group counts, the number of groups with reported
+panel counts or capacities, summed panel count and summed
+capacity in kWp. Missing values are excluded; totals with
+no observations are null. Negative and nonfinite values are
+rejected. System IDs, connection identifiers and serial
+numbers are not returned. No upstream mutation is invoked.
 
 ## Authentication and upstream access
 
