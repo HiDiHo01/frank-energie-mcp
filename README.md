@@ -85,6 +85,7 @@ The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol e
 | Tool | `get_period_usage_and_costs` | Read electricity, gas and feed-in usage/cost totals for a billing period. |
 | Tool | `get_ev_charger_statistics` | Count linked EV chargers, reachable devices and smart charging capabilities. |
 | Tool | `get_monthly_cost_insights` | Read expected and actual cost totals for a selected month. |
+| Tool | `get_account_country` | Read the authenticated account's two-letter country code. |
 | Tool | `get_account` | Requires credentials and a site reference; returns only `{"authenticated": true}` after a successful account request |
 | Tool | `list_sites` | Requires credentials; returns only the number of recognized delivery sites |
 | Resource | `frank-energie://capabilities` | Static description of capabilities |
@@ -444,6 +445,15 @@ Missing cost values are null. It excludes invoice IDs,
 account identifiers and meter-reading timestamps. The tool
 requires credentials and `FRANK_ENERGIE_SITE_REFERENCE`,
 and does not modify upstream data.
+
+## Account country
+
+`get_account_country()` delegates to upstream `user_country()`
+and returns only `country_code`, a validated uppercase
+two-letter country code such as `NL`. It requires Frank Energie
+credentials but not a delivery-site reference. It excludes user
+IDs, email addresses and other account metadata. This operation
+is read-only.
 
 ## Authentication
 
