@@ -311,6 +311,13 @@ def create_server(
         )
 
     @server.tool()
+    async def get_period_usage_and_costs(start_date: date) -> object:
+        """Read upstream period electricity, gas and feed-in usage and costs."""
+        return await safe_tool_call(
+            lambda: energy_service.get_period_usage_and_costs(start_date)
+        )
+
+    @server.tool()
     async def get_daily_consumption_statistics(
         start_date: date, end_date: date
     ) -> object:
