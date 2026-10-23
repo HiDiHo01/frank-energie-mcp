@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..library import default_library_bridge
+from ..library import default_service
 from ..models import ToolResponse
 
 
@@ -38,9 +38,7 @@ def _extract_sites_payload(data: Any) -> ListSitesResult:
 
 async def list_sites() -> ToolResponse:
     """Return the configured site list from the Frank Energie library."""
-    bridge = default_library_bridge()
-    async with bridge.session() as client:
-        data = await client.user()
+    data = await default_service().list_sites()
 
     result = _extract_sites_payload(data)
     return ToolResponse(status="ok", data=result)
