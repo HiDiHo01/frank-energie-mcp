@@ -535,6 +535,54 @@ class FrankEnergieService:
             raise ValueError("Unexpected upstream device collection.")
         return {"count": len(devices)}
 
+    async def get_smart_battery_fleet_statistics(self) -> dict[str, Any]:
+        """Summarize linked battery capacity and power without device identifiers."""
+        self._require_credentials()
+        async with self.bridge.session() as client:
+            data = await client.smart_batteries()
+        if data is None:
+            return {
+                "battery_count": 0,
+                "capacity_reported_count": 0,
+                "total_capacity_kwh": None,
+                "total_max_charge_power": None,
+                "total_max_discharge_power": None,
+            }
+        batteries = getattr(data, "batteries", None)
+        if not isinstance(batteries, list):
+            raise ValueError("Unexpected smart battery collection.")
+        totals: dict[str, float] = {}
+        counts: dict[str, int] = {}
+        for field in ("capacity", "max_charge_power", "max_discharge_power"):
+            values: list[float] = []
+            for battery in batteries:
+                value = getattr(battery, field, None)
+                if value is None:
+                    continue
+                if (
+                    isinstance(value, bool)
+                    or not isinstance(value, (int, float))
+                    or not isfinite(value)
+                    or value < 0
+                ):
+                    raise ValueError("Unexpected smart battery capacity or power.")
+                values.append(float(value))
+            totals[field] = sum(values)
+            counts[field] = len(values)
+        return {
+            "battery_count": len(batteries),
+            "capacity_reported_count": counts["capacity"],
+            "total_capacity_kwh": (
+                totals["capacity"] if counts["capacity"] else None
+            ),
+            "total_max_charge_power": (
+                totals["max_charge_power"] if counts["max_charge_power"] else None
+            ),
+            "total_max_discharge_power": (
+                totals["max_discharge_power"] if counts["max_discharge_power"] else None
+            ),
+        }
+
     async def get_smart_battery_count(self) -> dict[str, int]:
         """Count linked smart batteries without exposing device information."""
         return await self._linked_device_count("smart_batteries", "batteries")
