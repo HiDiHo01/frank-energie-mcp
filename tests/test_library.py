@@ -97,6 +97,7 @@ async def test_server_registers_tools_resources_and_prompts(
         "get_smart_pv_system_summary",
         "get_smart_battery_status",
         "get_smart_hvac_status",
+        "get_daily_consumption_statistics",
         "get_account",
         "list_sites",
     }
