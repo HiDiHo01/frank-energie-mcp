@@ -112,6 +112,7 @@ class FrankEnergieService:
         async with self.bridge.session() as client:
             return await client.UserSites()
 
+
 def _current_price(series: Any) -> dict[str, Any] | None:
     """Return the active upstream interval as a JSON-compatible record."""
     price = series.current_hour
