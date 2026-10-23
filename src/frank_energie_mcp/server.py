@@ -289,6 +289,11 @@ def create_server(
         return await safe_tool_call(energy_service.get_smart_battery_count)
 
     @server.tool()
+    async def get_smart_pv_fleet_statistics() -> object:
+        """Aggregate linked solar panel groups and declared PV capacity."""
+        return await safe_tool_call(energy_service.get_smart_pv_fleet_statistics)
+
+    @server.tool()
     async def get_smart_pv_system_count() -> object:
         """Count linked smart solar PV systems without returning device identifiers."""
         return await safe_tool_call(energy_service.get_smart_pv_system_count)
