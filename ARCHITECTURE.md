@@ -255,6 +255,14 @@ It does not expose device identifiers, settings or brands, and
 does not infer unreported capacity. It requires credentials
 and performs no mutations.
 
+## Electric vehicle fleet aggregation
+
+The electric vehicle statistics tool delegates to upstream
+`enode_vehicles()` and counts validated reachability and
+smart charging flags. Vehicle IDs and configuration are
+not serialized. Credentials are required; the operation
+does not change charging settings.
+
 ## Authentication and privacy
 
 Public market-price tools work without configured credentials. Account/site operations require `FRANK_ENERGIE_USERNAME` and `FRANK_ENERGIE_PASSWORD`; account operations also require `FRANK_ENERGIE_SITE_REFERENCE`. The bridge reads these from the process environment. Credentials are not passed as MCP tool arguments.
