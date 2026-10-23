@@ -59,13 +59,18 @@ if __name__ == "__main__":
         print(f"NETWORK_ERROR: {type(exc).__name__}", file=sys.stderr)
         sys.exit(2)
     except (ValueError, KeyError, TypeError, AttributeError) as exc:
-        reason = str(exc) if str(exc) in {
+        reason = (
+            str(exc)
+            if str(exc)
+            in {
             "No current electricity price returned.",
             "Current electricity price is missing or not finite.",
             "Electricity timestamps are not timezone-aware or ordered.",
             "Electricity price interval does not cover current time.",
             "Electricity price unit is not kWh.",
-        } else "Unexpected response format."
+        }
+            else "Unexpected response format."
+        )
         print(f"API_RESPONSE_ERROR: {type(exc).__name__}: {reason}", file=sys.stderr)
         sys.exit(3)
     except Exception as exc:
