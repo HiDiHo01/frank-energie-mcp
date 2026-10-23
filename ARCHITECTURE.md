@@ -164,6 +164,16 @@ boolean/status fields. Raw upstream models, connection identifiers and
 personal data are excluded from MCP output. Contract resolution changes
 remain intentionally unavailable as MCP tools.
 
+## Aggregated invoice and PV read paths
+
+Annual invoice statistics reuse the upstream `invoices(site_reference)`
+model, filtering by local invoice start year and reducing to count,
+sum and arithmetic mean. The service never serializes raw invoice
+objects. The PV summary tool delegates to
+`smart_pv_system_summary(device_id)` and allowlists only status and
+numeric totals. Both require credentials and return no identifying
+account or device metadata. These tools are read-only.
+
 ## Authentication and privacy
 
 Public market-price tools work without configured credentials. Account/site operations require `FRANK_ENERGIE_USERNAME` and `FRANK_ENERGIE_PASSWORD`; account operations also require `FRANK_ENERGIE_SITE_REFERENCE`. The bridge reads these from the process environment. Credentials are not passed as MCP tool arguments.
