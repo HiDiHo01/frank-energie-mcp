@@ -7,8 +7,11 @@ from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
-from typing import Any, Protocol, cast
+from typing import Any, Literal, Protocol, cast
 from zoneinfo import ZoneInfo
+
+
+PriceResolution = Literal["PT15M", "PT60M"]
 
 
 class _AsyncFrankEnergie(Protocol):
@@ -29,7 +32,9 @@ class _AsyncFrankEnergie(Protocol):
     async def month_summary(self) -> Any:
         """Return the month summary."""
 
-    async def prices(self, start_date: date | None = None) -> Any:
+    async def prices(
+        self, start_date: date | None = None, resolution: PriceResolution = "PT15M"
+    ) -> Any:
         """Return prices for the requested date range."""
 
     async def user_prices(self, start_date: date, end_date: date | None = None) -> Any:
@@ -70,30 +75,30 @@ class FrankEnergieService:
 
     bridge: FrankEnergieLibraryBridge
 
-    async def get_current_prices(self) -> dict[str, Any]:
+    async def get_current_prices(self, resolution: PriceResolution = "PT15M") -> dict[str, Any]:
         """Return the currently applicable upstream electricity and gas records."""
         async with self.bridge.session() as client:
-            prices = await client.prices(datetime.now(ZoneInfo("Europe/Amsterdam")).date())
+            prices = await client.prices(datetime.now(ZoneInfo("Europe/Amsterdam")).date(), resolution=resolution)
         return {
             "electricity": _current_price(prices.electricity),
             "gas": _current_price(prices.gas),
         }
 
-    async def get_today_prices(self) -> Any:
+    async def get_today_prices(self, resolution: PriceResolution = "PT15M") -> Any:
         """Return today's prices."""
         async with self.bridge.session() as client:
-            return await client.prices(datetime.now(ZoneInfo("Europe/Amsterdam")).date())
+            return await client.prices(datetime.now(ZoneInfo("Europe/Amsterdam")).date(), resolution=resolution)
 
-    async def get_tomorrow_prices(self) -> Any:
+    async def get_tomorrow_prices(self, resolution: PriceResolution = "PT15M") -> Any:
         """Return tomorrow's prices."""
         tomorrow = datetime.now(ZoneInfo("Europe/Amsterdam")).date() + timedelta(days=1)
         async with self.bridge.session() as client:
-            return await client.prices(tomorrow)
+            return await client.prices(tomorrow, resolution=resolution)
 
-    async def get_gas_price(self) -> dict[str, Any] | None:
+    async def get_gas_price(self, resolution: PriceResolution = "PT15M") -> dict[str, Any] | None:
         """Return the currently applicable gas price, or None if unavailable."""
         async with self.bridge.session() as client:
-            prices = await client.prices(datetime.now(ZoneInfo("Europe/Amsterdam")).date())
+            prices = await client.prices(datetime.now(ZoneInfo("Europe/Amsterdam")).date(), resolution=resolution)
         return _current_price(prices.gas)
 
     async def get_account(self) -> Any:
