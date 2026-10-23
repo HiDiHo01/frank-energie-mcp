@@ -1,1 +1,1 @@
-"""Legacy tool package retained for import compatibility; tools live in server.py."""
+"""Tool implementations are registered centrally in server.py; legacy package retained."""
