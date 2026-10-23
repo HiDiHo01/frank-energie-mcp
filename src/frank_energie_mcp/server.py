@@ -334,6 +334,17 @@ def create_server(
         )
 
     @server.tool()
+    async def get_smart_battery_session_statistics(
+        device_id: str, start_date: date, end_date: date
+    ) -> object:
+        """Aggregate battery trading results over an inclusive date range."""
+        return await safe_tool_call(
+            lambda: energy_service.get_smart_battery_session_statistics(
+                device_id, start_date, end_date
+            )
+        )
+
+    @server.tool()
     async def get_smart_battery_status(device_id: str) -> object:
         """Read state of charge, status and capacity of one linked battery."""
         return await safe_tool_call(
