@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Any
 
-from ..library import default_library_bridge
+from ..library import default_service
 from ..models import ToolResponse
 
 
@@ -32,10 +32,7 @@ def _extract_tomorrow_prices_payload(data: Any) -> TomorrowPricesResult:
 
 async def get_tomorrow_prices() -> ToolResponse:
     """Return tomorrow's prices payload from the Frank Energie library."""
-    bridge = default_library_bridge()
-    tomorrow = date.today() + timedelta(days=1)
-    async with bridge.session() as client:
-        data = await client.prices(tomorrow, tomorrow)
+    data = await default_service().get_tomorrow_prices()
 
     result = _extract_tomorrow_prices_payload(data)
     return ToolResponse(status="ok", data=result)
