@@ -105,3 +105,11 @@ Tests use mock clients; they do not require production credentials. These comman
 - End-to-end MCP client interoperability has not been validated.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md), [MCP_SPEC.md](MCP_SPEC.md), [AI_POLICY.md](AI_POLICY.md) and [SECURITY.md](SECURITY.md). Do not commit credentials or personal account data.
+
+## Production deployment gates
+
+**Local Windows (stdio):** Install into a dedicated Python 3.14 virtual environment, run the four validation commands above, and configure the MCP client to launch the virtual-environment Python executable. Keep credentials in the process environment or a protected secret store. Do not store them in client configuration committed to Git.
+
+**External ChatGPT access:** Not production-ready yet. The built-in Streamable HTTP listener is **loopback-only and unauthenticated**. Do not expose it publicly or treat a TLS tunnel alone as sufficient authentication. A production deployment needs an HTTPS ingress with validated client authentication and authorization, restricted access to the upstream loopback service, rate limiting, request/body size limits, TLS certificate management, and documented token rotation. Verify that the intended ChatGPT MCP connector supports the chosen authentication flow before deployment. A reverse proxy or tunnel must not forward unauthenticated public requests to `/mcp`.
+
+**Release blockers:** Verify all CI checks on the exact release commit; replace legacy placeholder tool responses or remove those modules; normalize upstream pricing data to bounded, stable JSON; validate real MCP tool calls over both transports; test upstream timeouts, authentication failures, missing data, and time-zone boundaries; and document a rollback procedure. Do not describe the service as production-ready until these checks pass.
