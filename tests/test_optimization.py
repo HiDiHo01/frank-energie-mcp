@@ -37,7 +37,9 @@ def series(values: list[float], gap: int | None = None) -> list[tuple[datetime, 
 
 def test_best_start_requires_consecutive_intervals() -> None:
     """Choose cheapest uninterrupted window and never bridge a missing bin."""
-    assert best_start(series([5, 5, 1, 1]), 30, "PT15M")["average_total"] == 1
+    result = best_start(series([5, 5, 1, 1]), 30, "PT15M")
+    assert result is not None
+    assert result["average_total"] == 1
     assert best_start(series([1, 1, 1, 1], gap=2), 60, "PT15M") is None
 
 
