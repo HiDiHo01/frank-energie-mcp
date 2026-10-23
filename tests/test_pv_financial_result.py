@@ -65,7 +65,9 @@ async def test_pv_financial_result_rejects_invalid_input() -> None:
     """Require credentials, a device ID and finite totals."""
     client = AsyncMock()
     with pytest.raises(RuntimeError, match="credentials"):
-        await make_service(client, authenticated=False).get_smart_pv_financial_result("device")
+        await make_service(client, authenticated=False).get_smart_pv_financial_result(
+            "device"
+        )
     with pytest.raises(ValueError, match="device_id"):
         await make_service(client).get_smart_pv_financial_result(" ")
     client.smart_pv_system_summary.return_value = SimpleNamespace(
