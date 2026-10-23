@@ -28,9 +28,7 @@ def test_full_local_day_price_series_survives_normalization(
     """Retain every real interval across DST without dropping repeated local times."""
     start = datetime(day.year, day.month, day.day, tzinfo=AMSTERDAM).astimezone(UTC)
     following = day + timedelta(days=1)
-    end = datetime(
-        following.year, following.month, following.day, tzinfo=AMSTERDAM
-    ).astimezone(UTC)
+    end = datetime(following.year, following.month, following.day, tzinfo=AMSTERDAM).astimezone(UTC)
     expected_count = hours * 60 // resolution_minutes
     assert end - start == timedelta(hours=hours), resolution
 
