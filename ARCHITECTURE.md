@@ -323,3 +323,9 @@ The default runtime is stdio. Optional Streamable HTTP binds only to `127.0.0.1`
 The trading result tool reuses the upstream battery summary's
 `total_result` without recomputing session-level business logic. It
 exposes no account or device identifiers and performs no mutations.
+
+## PV financial result boundary
+
+The PV financial result tool delegates to the upstream PV system summary
+and allowlists cumulative bonus and result values. It does not duplicate
+upstream calculations or expose identifiers.
