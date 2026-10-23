@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Thirty read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Thirty-one read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -44,6 +44,7 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_smart_pv_system_summary` | `get_smart_pv_system_summary(device_id)` | Authenticated, allowlisted PV status and totals |
 | `get_smart_battery_status` | `get_smart_battery_status(device_id)` | Authenticated battery charge, status, update timestamp and capacity |
 | `get_smart_hvac_status` | `get_smart_hvac_status()` | Authenticated HVAC activation and country-availability flags |
+| `get_daily_consumption_statistics` | `get_daily_consumption_statistics(start_date, end_date)` | Authenticated daily kWh count, total and average over an inclusive range |
 | `get_account` | `get_account()` | After a successful authenticated account request, returns only `{"authenticated": true}`; account details are deliberately not exposed |
 | `list_sites` | `list_sites()` | `{"count": N}` for a recognized site collection; site identifiers and addresses are not exposed |
 
@@ -280,6 +281,18 @@ returns `available: bool`, `is_activated: bool | null`, and
 `is_available_in_country: bool | null`. Null upstream enrollment
 produces `available=false` with null flags. User identifiers and
 creation timestamps are excluded; no HVAC mutation is invoked.
+
+## Daily consumption statistics contract
+
+`get_daily_consumption_statistics(start_date, end_date)` accepts
+two ISO calendar dates, inclusive, with `end_date >= start_date`
+and a maximum span of 366 days. It requires credentials and a
+configured delivery-site reference. It returns `start_date`,
+`end_date`, `day_count`, `total_kwh` and
+`average_daily_kwh` (null for zero observed days).
+Only upstream days present in the requested range are aggregated;
+missing days do not count as zero. User identifiers and individual
+readings are not returned. The operation is read-only.
 
 ## Authentication and upstream access
 
