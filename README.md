@@ -58,6 +58,8 @@ The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol e
 | Tool | `get_average_prices` | Averages available normalized `total` prices for electricity and gas for an optional Amsterdam calendar date and `PT15M`/`PT60M` resolution; reports interval count, first/last timestamps, coverage seconds, and completion status. |
 | Tool | `get_lowest_price` | Lowest available normalized total interval per energy type, with coverage status. |
 | Tool | `get_highest_price` | Highest available normalized total interval per energy type, with coverage status. |
+| Tool | `get_lowest_period` | Finds the cheapest uninterrupted window by average normalized total price. |
+| Tool | `get_highest_period` | Finds the most expensive uninterrupted window by average normalized total price. |
 | Tool | `get_gas_price` | Returns the current gas interval or `null` when unavailable |
 | Tool | `get_account` | Requires credentials and a site reference; returns only `{"authenticated": true}` after a successful account request |
 | Tool | `list_sites` | Requires credentials; returns only the number of recognized delivery sites |
@@ -99,6 +101,34 @@ duplicate or out-of-day intervals are rejected. Coverage is measured in
 elapsed seconds, including 23- and 25-hour daylight-saving transition days.
 Minimum and maximum ties select the first interval in the upstream list.
 For exact response shapes, see [MCP_SPEC.md](MCP_SPEC.md).
+
+## Consecutive price periods
+
+`get_lowest_period` and `get_highest_period` accept a required
+`period_minutes` and optional `day` (default: today in Europe/Amsterdam)
+and `resolution` (default: `PT15M`; also `PT60M`).
+
+For example, to find the cheapest four consecutive hours today, call
+`get_lowest_period` with:
+
+```json
+{"period_minutes": 240, "resolution": "PT15M"}
+```
+
+A four-hour window requires 16 consecutive 15-minute intervals, or
+4 consecutive 60-minute intervals with `PT60M`. The duration must be
+positive and divisible by the chosen resolution (15 or 60 minutes).
+The selected window minimizes or maximizes the arithmetic mean of
+normalized `total` prices; it is calculated separately for electricity
+and gas. Each result includes `period` (or `null` if no uninterrupted
+window exists), `available_interval_count`, `coverage_seconds`,
+`expected_seconds`, and `status`. The period includes `start`, `end`,
+`average_total`, `interval_count`, and `unit`.
+
+Only fully contained, contiguous windows are considered; gaps are not
+filled. The search uses the entire requested calendar day and does not
+restrict today's result to future intervals. Equal averages prefer the
+earliest window. See [MCP_SPEC.md](MCP_SPEC.md).
 
 ## Authentication
 
