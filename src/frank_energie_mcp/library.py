@@ -7,9 +7,21 @@ from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
+from math import isfinite
 from typing import Any, Literal, Protocol, cast
 from zoneinfo import ZoneInfo
 
+from .optimization import (
+    battery_savings,
+    best_start,
+    energy_cost,
+    price_statistics,
+    price_trend,
+    price_volatility,
+    split_periods,
+    threshold_periods,
+    validated_series,
+)
 from .price_schemas import normalize_interval, normalize_market_prices
 
 PriceResolution = Literal["PT15M", "PT60M"]
@@ -27,10 +39,25 @@ class _AsyncFrankEnergie(Protocol):
     async def UserSites(self) -> Any:  # noqa: N802 - upstream API method name
         """Return authenticated delivery sites."""
 
-    async def invoices(self) -> Any:
+    async def user_country(self) -> Any:
+        """Return the upstream authenticated user's country payload."""
+
+    async def enode_chargers(self, site_reference: str, start_date: date) -> Any:
+        """Return upstream charging devices for a site and date."""
+
+    async def period_usage_and_costs(self, site_reference: str, start_date: str) -> Any:
+        """Return upstream period usage and cost categories."""
+
+    async def meter_readings(self, site_reference: str) -> Any:
+        """Return upstream daily consumption records for a delivery site."""
+
+    async def invoices(self, site_reference: str) -> Any:
         """Return invoice data."""
 
-    async def month_summary(self) -> Any:
+    async def month_insights(self, site_reference: str, date: str) -> Any:
+        """Return upstream monthly usage and cost insights."""
+
+    async def month_summary(self, site_reference: str) -> Any:
         """Return the month summary."""
 
     async def prices(
@@ -47,6 +74,33 @@ class _AsyncFrankEnergie(Protocol):
         resolution: str | None = "PT15M",
     ) -> Any:
         """Return customer market prices using the upstream method signature."""
+
+    async def smart_batteries(self) -> Any:
+        """Return linked smart batteries."""
+
+    async def smart_pv_systems(self) -> Any:
+        """Return linked solar PV systems."""
+
+    async def enode_vehicles(self) -> Any:
+        """Return linked electric vehicles."""
+
+    async def smart_hvac_status(self) -> Any:
+        """Return authenticated smart HVAC status."""
+
+    async def user_smart_feed_in(self) -> Any:
+        """Return the current smart feed-in enrollment state."""
+
+    async def contract_price_resolution_state(self, connection_id: str | None = None) -> Any:
+        """Return the current contract price resolution state."""
+
+    async def smart_battery_sessions(self, device_id: str, start_date: date, end_date: date) -> Any:
+        """Return upstream trading sessions for a linked smart battery."""
+
+    async def smart_battery_details(self, device_id: str) -> Any:
+        """Return one linked smart battery detail model."""
+
+    async def smart_pv_system_summary(self, device_id: str) -> Any:
+        """Return one linked solar PV system summary."""
 
     async def close(self) -> None:
         """Close the underlying HTTP session."""
@@ -201,9 +255,250 @@ class FrankEnergieService:
             "electricity": _extreme_period(
                 normalized["electricity"], requested_day, period_minutes, step, highest
             ),
-            "gas": _extreme_period(
-                normalized["gas"], requested_day, period_minutes, step, highest
+            "gas": _extreme_period(normalized["gas"], requested_day, period_minutes, step, highest),
+        }
+
+    async def _optimization_data(
+        self, day: date | None, resolution: PriceResolution
+    ) -> tuple[date, dict[str, Any]]:
+        """Retrieve one bounded normalized market-price response."""
+        requested_day = day or datetime.now(ZoneInfo("Europe/Amsterdam")).date()
+        async with self.bridge.session() as client:
+            prices = await client.prices(requested_day, resolution=resolution)
+        return requested_day, normalize_market_prices(prices)
+
+    async def get_best_start_time(
+        self,
+        duration_minutes: int,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+        earliest_start: datetime | None = None,
+        latest_end: datetime | None = None,
+    ) -> dict[str, Any]:
+        """Return the cheapest continuous start window for each energy type."""
+        for bound in (earliest_start, latest_end):
+            if bound is not None and (bound.tzinfo is None or bound.utcoffset() is None):
+                raise ValueError("Time bounds must be timezone-aware.")
+        earliest = earliest_start.astimezone(UTC) if earliest_start else None
+        latest = latest_end.astimezone(UTC) if latest_end else None
+        if earliest and latest and earliest >= latest:
+            raise ValueError("earliest_start must precede latest_end.")
+        requested_day, prices = await self._optimization_data(day, resolution)
+        return {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+            "duration_minutes": duration_minutes,
+            **{
+                energy: best_start(
+                    validated_series(prices[energy], requested_day, resolution),
+                    duration_minutes,
+                    resolution,
+                    earliest,
+                    latest,
+                )
+                for energy in ("electricity", "gas")
+            },
+        }
+
+    async def calculate_energy_cost(
+        self,
+        power_kw: float,
+        duration_minutes: int,
+        start_time: datetime,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Estimate fixed-power electricity consumption from normalized total prices."""
+        if start_time.tzinfo is None or start_time.utcoffset() is None:
+            raise ValueError("start_time must be timezone-aware.")
+        start = start_time.astimezone(UTC)
+        requested_day = start.astimezone(ZoneInfo("Europe/Amsterdam")).date()
+        _, prices = await self._optimization_data(requested_day, resolution)
+        result = energy_cost(
+            validated_series(prices["electricity"], requested_day, resolution),
+            start,
+            duration_minutes,
+            power_kw,
+            resolution,
+        )
+        return {"date": requested_day.isoformat(), "resolution": resolution, **result}
+
+    async def get_price_threshold_periods(
+        self,
+        threshold: float,
+        below: bool = True,
+        minimum_duration_minutes: int = 15,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Group consecutive intervals strictly below or above a total-price threshold."""
+        requested_day, prices = await self._optimization_data(day, resolution)
+        return {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+            **{
+                energy: threshold_periods(
+                    validated_series(prices[energy], requested_day, resolution),
+                    threshold,
+                    below,
+                    minimum_duration_minutes,
+                )
+                for energy in ("electricity", "gas")
+            },
+        }
+
+    async def get_best_split_periods(
+        self,
+        total_minutes: int,
+        minimum_block_minutes: int,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Choose the cheapest nonoverlapping full-length blocks per energy type."""
+        requested_day, prices = await self._optimization_data(day, resolution)
+        return {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+            **{
+                energy: split_periods(
+                    validated_series(prices[energy], requested_day, resolution),
+                    total_minutes,
+                    minimum_block_minutes,
+                    resolution,
+                )
+                for energy in ("electricity", "gas")
+            },
+        }
+
+    async def calculate_battery_savings(
+        self,
+        capacity_kwh: float,
+        charge_power_kw: float,
+        discharge_power_kw: float,
+        round_trip_efficiency: float,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Estimate a single idealized battery arbitrage cycle using public prices."""
+        requested_day, prices = await self._optimization_data(day, resolution)
+        return {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+            "electricity": battery_savings(
+                validated_series(prices["electricity"], requested_day, resolution),
+                capacity_kwh,
+                charge_power_kw,
+                discharge_power_kw,
+                round_trip_efficiency,
+                resolution,
             ),
+        }
+
+    async def get_negative_price_periods(
+        self,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+        minimum_duration_minutes: int = 15,
+    ) -> dict[str, Any]:
+        """Find consecutive negative-total electricity price intervals."""
+        requested_day, prices = await self._optimization_data(day, resolution)
+        return {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+            "electricity": threshold_periods(
+                validated_series(prices["electricity"], requested_day, resolution),
+                0.0,
+                True,
+                minimum_duration_minutes,
+            ),
+        }
+
+    async def get_price_trend(
+        self,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+        stable_tolerance: float = 0.005,
+    ) -> dict[str, Any]:
+        """Classify first-to-last total price changes separately by energy type."""
+        requested_day, prices = await self._optimization_data(day, resolution)
+        return {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+            **{
+                energy: price_trend(
+                    validated_series(prices[energy], requested_day, resolution),
+                    stable_tolerance,
+                )
+                for energy in ("electricity", "gas")
+            },
+        }
+
+    async def get_price_volatility(
+        self,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Compute population spread and adjacent price changes."""
+        requested_day, prices = await self._optimization_data(day, resolution)
+        return {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+            **{
+                energy: price_volatility(
+                    validated_series(prices[energy], requested_day, resolution)
+                )
+                for energy in ("electricity", "gas")
+            },
+        }
+
+    async def get_price_statistics(
+        self,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Return mean, median, percentiles, minimum and maximum total prices."""
+        requested_day, prices = await self._optimization_data(day, resolution)
+        return {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+            **{
+                energy: price_statistics(
+                    validated_series(prices[energy], requested_day, resolution)
+                )
+                for energy in ("electricity", "gas")
+            },
+        }
+
+    async def compare_days(
+        self,
+        first_day: date,
+        second_day: date,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Compare available total-price distributions across two local days."""
+        first_date, first_prices = await self._optimization_data(first_day, resolution)
+        second_date, second_prices = await self._optimization_data(second_day, resolution)
+        first = {
+            energy: price_statistics(validated_series(first_prices[energy], first_date, resolution))
+            for energy in ("electricity", "gas")
+        }
+        second = {
+            energy: price_statistics(
+                validated_series(second_prices[energy], second_date, resolution)
+            )
+            for energy in ("electricity", "gas")
+        }
+        return {
+            "resolution": resolution,
+            "first": {"date": first_date.isoformat(), **first},
+            "second": {"date": second_date.isoformat(), **second},
+            "mean_difference": {
+                energy: (
+                    second[energy]["mean"] - first[energy]["mean"]
+                    if first[energy]["mean"] is not None and second[energy]["mean"] is not None
+                    else None
+                )
+                for energy in ("electricity", "gas")
+            },
         }
 
     async def get_tomorrow_prices(self, resolution: PriceResolution = "PT15M") -> Any:
@@ -220,6 +515,723 @@ class FrankEnergieService:
                 datetime.now(ZoneInfo("Europe/Amsterdam")).date(), resolution=resolution
             )
         return _current_price(prices.gas)
+
+    async def _linked_device_count(self, operation: str, field: str) -> dict[str, int]:
+        """Return only a collection count, never identifiers or device metadata."""
+        if not self.bridge.username or not self.bridge.password:
+            raise RuntimeError("Device access requires Frank Energie credentials.")
+        async with self.bridge.session() as client:
+            data = await getattr(client, operation)()
+        if data is None:
+            return {"count": 0}
+        devices = getattr(data, field, None)
+        if not isinstance(devices, list):
+            raise ValueError("Unexpected upstream device collection.")
+        return {"count": len(devices)}
+
+    async def get_smart_battery_fleet_statistics(self) -> dict[str, Any]:
+        """Summarize linked battery capacity and power without device identifiers."""
+        self._require_credentials()
+        async with self.bridge.session() as client:
+            data = await client.smart_batteries()
+        if data is None:
+            return {
+                "battery_count": 0,
+                "capacity_reported_count": 0,
+                "total_capacity_kwh": None,
+                "total_max_charge_power": None,
+                "total_max_discharge_power": None,
+            }
+        batteries = getattr(data, "batteries", None)
+        if not isinstance(batteries, list):
+            raise ValueError("Unexpected smart battery collection.")
+        totals: dict[str, float] = {}
+        counts: dict[str, int] = {}
+        for field in ("capacity", "max_charge_power", "max_discharge_power"):
+            values: list[float] = []
+            for battery in batteries:
+                value = getattr(battery, field, None)
+                if value is None:
+                    continue
+                if (
+                    isinstance(value, bool)
+                    or not isinstance(value, (int, float))
+                    or not isfinite(value)
+                    or value < 0
+                ):
+                    raise ValueError("Unexpected smart battery capacity or power.")
+                values.append(float(value))
+            totals[field] = sum(values)
+            counts[field] = len(values)
+        return {
+            "battery_count": len(batteries),
+            "capacity_reported_count": counts["capacity"],
+            "total_capacity_kwh": (totals["capacity"] if counts["capacity"] else None),
+            "total_max_charge_power": (
+                totals["max_charge_power"] if counts["max_charge_power"] else None
+            ),
+            "total_max_discharge_power": (
+                totals["max_discharge_power"] if counts["max_discharge_power"] else None
+            ),
+        }
+
+    async def get_smart_battery_count(self) -> dict[str, int]:
+        """Count linked smart batteries without exposing device information."""
+        return await self._linked_device_count("smart_batteries", "batteries")
+
+    async def get_smart_pv_fleet_statistics(self) -> dict[str, Any]:
+        """Aggregate linked PV panel groups and declared capacity without identifiers."""
+        self._require_credentials()
+        async with self.bridge.session() as client:
+            data = await client.smart_pv_systems()
+        if data is None:
+            systems: list[Any] = []
+        else:
+            raw_systems = getattr(data, "systems", None)
+            if not isinstance(raw_systems, list):
+                raise ValueError("Unexpected smart PV system collection.")
+            systems = raw_systems
+        group_count = 0
+        panel_count = 0
+        panel_count_reported = 0
+        capacity_kwp = 0.0
+        capacity_reported = 0
+        for system in systems:
+            groups = getattr(system, "panel_groups", None)
+            if not isinstance(groups, list):
+                raise ValueError("Unexpected smart PV panel groups.")
+            group_count += len(groups)
+            for group in groups:
+                panels = getattr(group, "panel_count", None)
+                capacity = getattr(group, "capacity_kwp", None)
+                if panels is not None:
+                    if type(panels) is not int or panels < 0:
+                        raise ValueError("Unexpected smart PV panel count.")
+                    panel_count += panels
+                    panel_count_reported += 1
+                if capacity is not None:
+                    if (
+                        isinstance(capacity, bool)
+                        or not isinstance(capacity, (int, float))
+                        or not isfinite(capacity)
+                        or capacity < 0
+                    ):
+                        raise ValueError("Unexpected smart PV capacity.")
+                    capacity_kwp += float(capacity)
+                    capacity_reported += 1
+        return {
+            "system_count": len(systems),
+            "panel_group_count": group_count,
+            "panel_count_reported_groups": panel_count_reported,
+            "total_panel_count": panel_count if panel_count_reported else None,
+            "capacity_reported_groups": capacity_reported,
+            "total_capacity_kwp": capacity_kwp if capacity_reported else None,
+        }
+
+    async def get_smart_pv_system_count(self) -> dict[str, int]:
+        """Count linked smart solar systems without exposing device information."""
+        return await self._linked_device_count("smart_pv_systems", "systems")
+
+    async def get_electric_vehicle_statistics(self) -> dict[str, int]:
+        """Count linked vehicles by reachability and smart charging capability."""
+        self._require_credentials()
+        async with self.bridge.session() as client:
+            data = await client.enode_vehicles()
+        if data is None:
+            return {
+                "vehicle_count": 0,
+                "reachable_count": 0,
+                "smart_capable_count": 0,
+                "smart_enabled_count": 0,
+            }
+        vehicles = getattr(data, "vehicles", None)
+        if not isinstance(vehicles, list):
+            raise ValueError("Unexpected electric vehicle collection.")
+        reachable_count = 0
+        smart_capable_count = 0
+        smart_enabled_count = 0
+        for vehicle in vehicles:
+            reachable = getattr(vehicle, "is_reachable", None)
+            capable = getattr(vehicle, "can_smart_charge", None)
+            settings = getattr(vehicle, "charge_settings", None)
+            enabled = getattr(settings, "is_smart_charging_enabled", None)
+            if any(type(flag) is not bool for flag in (reachable, capable, enabled)):
+                raise ValueError("Unexpected electric vehicle capability flags.")
+            reachable_count += int(reachable is True)
+            smart_capable_count += int(capable is True)
+            smart_enabled_count += int(enabled is True)
+        return {
+            "vehicle_count": len(vehicles),
+            "reachable_count": reachable_count,
+            "smart_capable_count": smart_capable_count,
+            "smart_enabled_count": smart_enabled_count,
+        }
+
+    async def get_electric_vehicle_count(self) -> dict[str, int]:
+        """Count linked Enode electric vehicles without exposing identifiers."""
+        return await self._linked_device_count("enode_vehicles", "vehicles")
+
+    def _require_credentials(self) -> None:
+        """Reject account-scoped requests without configured credentials."""
+        if not self.bridge.username or not self.bridge.password:
+            raise RuntimeError("Account access requires Frank Energie credentials.")
+
+    async def get_smart_hvac_status(self) -> dict[str, bool | None]:
+        """Return non-identifying smart HVAC activation and availability flags."""
+        self._require_credentials()
+        async with self.bridge.session() as client:
+            state = await client.smart_hvac_status()
+        if state is None:
+            return {
+                "available": False,
+                "is_activated": None,
+                "is_available_in_country": None,
+            }
+        activated = getattr(state, "isActivated", None)
+        in_country = getattr(state, "isAvailableInCountry", None)
+        if activated is not None and type(activated) is not bool:
+            raise ValueError("Unexpected smart HVAC activation flag.")
+        if in_country is not None and type(in_country) is not bool:
+            raise ValueError("Unexpected smart HVAC country availability flag.")
+        return {
+            "available": True,
+            "is_activated": activated,
+            "is_available_in_country": in_country,
+        }
+
+    async def get_smart_pv_operational_status(self, device_id: str) -> dict[str, Any]:
+        """Expose upstream PV operational and steering status without identifiers."""
+        self._require_credentials()
+        if not isinstance(device_id, str) or not device_id.strip():
+            raise ValueError("device_id must be a non-empty string.")
+        async with self.bridge.session() as client:
+            summary = await client.smart_pv_system_summary(device_id)
+        if summary is None:
+            return {"available": False}
+        from enum import Enum
+
+        result: dict[str, Any] = {"available": True}
+        for field in ("operational_status", "steering_status"):
+            raw = getattr(summary, field, None)
+            value = raw.value if isinstance(raw, Enum) else raw
+            if not isinstance(value, str) or not value or len(value) > 64:
+                raise ValueError("Unexpected smart PV status.")
+            result[field] = value
+        timestamp = getattr(summary, "operational_status_timestamp", None)
+        if timestamp is not None and (
+            not isinstance(timestamp, datetime) or timestamp.tzinfo is None
+        ):
+            raise ValueError("Unexpected smart PV status timestamp.")
+        result["operational_status_timestamp"] = (
+            timestamp.isoformat() if timestamp is not None else None
+        )
+        return result
+
+    async def get_smart_feed_in_status(self) -> dict[str, bool | None]:
+        """Return allowlisted feed-in eligibility flags, never user identifiers."""
+        self._require_credentials()
+        async with self.bridge.session() as client:
+            state = await client.user_smart_feed_in()
+        if state is None:
+            return {
+                "available": False,
+                "is_activated": None,
+                "has_accepted_terms": None,
+                "is_app_onboarding_available": None,
+                "is_available_in_country": None,
+            }
+        fields = (
+            "is_activated",
+            "has_accepted_terms",
+            "is_app_onboarding_available",
+            "is_available_in_country",
+        )
+        flags = {key: getattr(state, key, None) for key in fields}
+        if any(type(value) is not bool for value in flags.values()):
+            raise ValueError("Unexpected smart feed-in response structure.")
+        return {"available": True, **flags}
+
+    async def get_contract_price_resolution_state(self, connection_id: str) -> dict[str, Any]:
+        """Read contract resolution options without changing the contract."""
+        self._require_credentials()
+        if not isinstance(connection_id, str) or not connection_id.strip():
+            raise ValueError("connection_id must be a non-empty string.")
+        async with self.bridge.session() as client:
+            state = await client.contract_price_resolution_state(connection_id)
+        if state is None:
+            return {"available": False}
+        active = getattr(state, "active_option", None)
+        options = getattr(state, "available_options", None)
+        can_change = getattr(state, "is_change_request_possible", None)
+        if (
+            active is not None
+            and not isinstance(active, str)
+            or not isinstance(options, list)
+            or not all(isinstance(option, str) for option in options)
+            or type(can_change) is not bool
+        ):
+            raise ValueError("Unexpected contract resolution response structure.")
+        return {
+            "available": True,
+            "active_option": active,
+            "available_options": options,
+            "is_change_request_possible": can_change,
+        }
+
+    async def get_ev_charger_statistics(self, start_date: date) -> dict[str, int]:
+        """Count linked EV chargers and supported features without identifiers."""
+        self._require_credentials()
+        if not self.bridge.site_reference:
+            raise RuntimeError("Charger access requires FRANK_ENERGIE_SITE_REFERENCE.")
+        if not isinstance(start_date, date) or isinstance(start_date, datetime):
+            raise ValueError("start_date must be a calendar date.")
+        async with self.bridge.session() as client:
+            data = await client.enode_chargers(self.bridge.site_reference, start_date)
+        chargers = getattr(data, "chargers", None)
+        if not isinstance(chargers, list):
+            raise ValueError("Unexpected EV charger response structure.")
+        reachable_count = 0
+        smart_capable_count = 0
+        smart_enabled_count = 0
+        for charger in chargers:
+            reachable = getattr(charger, "is_reachable", None)
+            capable = getattr(charger, "can_smart_charge", None)
+            settings = getattr(charger, "charge_settings", None)
+            enabled = getattr(settings, "is_smart_charging_enabled", None)
+            if any(type(value) is not bool for value in (reachable, capable, enabled)):
+                raise ValueError("Unexpected EV charger capability flags.")
+            reachable_count += int(reachable is True)
+            smart_capable_count += int(capable is True)
+            smart_enabled_count += int(enabled is True)
+        return {
+            "charger_count": len(chargers),
+            "reachable_count": reachable_count,
+            "smart_capable_count": smart_capable_count,
+            "smart_enabled_count": smart_enabled_count,
+        }
+
+    async def get_account_country(self) -> dict[str, str]:
+        """Return only the account's ISO country code, without personal data."""
+        self._require_credentials()
+        async with self.bridge.session() as client:
+            account = await client.user_country()
+        country = getattr(account, "countryCode", None)
+        if (
+            not isinstance(country, str)
+            or len(country) != 2
+            or not country.isascii()
+            or not country.isalpha()
+            or country != country.upper()
+        ):
+            raise ValueError("Unexpected account country code.")
+        return {"country_code": country}
+
+    async def get_current_month_cost_summary(self) -> dict[str, Any]:
+        """Return upstream current-month cost totals without account identifiers."""
+        self._require_credentials()
+        if not self.bridge.site_reference:
+            raise RuntimeError("Month summary requires FRANK_ENERGIE_SITE_REFERENCE.")
+        async with self.bridge.session() as client:
+            summary = await client.month_summary(self.bridge.site_reference)
+        if summary is None:
+            return {"available": False}
+        fields = (
+            "actualCostsUntilLastMeterReadingDate",
+            "expectedCostsUntilLastMeterReadingDate",
+            "expectedCosts",
+            "expectedCostsPerDay",
+            "meterReadingDayCompleteness",
+        )
+        result: dict[str, Any] = {"available": True}
+        for field in fields:
+            value = getattr(summary, field, None)
+            if value is not None and (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not isfinite(value)
+            ):
+                raise ValueError("Unexpected current month summary value.")
+            result[field] = float(value) if value is not None else None
+        excluded = getattr(summary, "gasExcluded", None)
+        if excluded is not None and type(excluded) is not bool:
+            raise ValueError("Unexpected current month gas exclusion flag.")
+        result["gas_excluded"] = excluded
+        return result
+
+    async def get_monthly_usage_differences(self, month: str) -> dict[str, Any]:
+        """Expose upstream actual/expected usage and cost differences by energy type."""
+        self._require_credentials()
+        if not self.bridge.site_reference:
+            raise RuntimeError("Monthly insights require FRANK_ENERGIE_SITE_REFERENCE.")
+        if not isinstance(month, str) or len(month) != 7 or month[4] != "-":
+            raise ValueError("month must be in YYYY-MM format.")
+        try:
+            parsed_month = date.fromisoformat(f"{month}-01")
+        except ValueError as exc:
+            raise ValueError("month must be a valid YYYY-MM calendar month.") from exc
+        if parsed_month.strftime("%Y-%m") != month:
+            raise ValueError("month must be in YYYY-MM format.")
+        async with self.bridge.session() as client:
+            insights = await client.month_insights(self.bridge.site_reference, month)
+        if insights is None:
+            return {"available": False, "month": month}
+        result: dict[str, Any] = {"available": True, "month": month}
+        fields = (
+            "actualUsage",
+            "actualAverageUnitPrice",
+            "actualCosts",
+            "expectedUsage",
+            "expectedAverageUnitPrice",
+            "expectedCosts",
+        )
+        for category, attribute in (
+            ("electricity", "electricityDifference"),
+            ("gas", "gasDifference"),
+            ("feed_in", "feedInDifference"),
+        ):
+            difference = getattr(insights, attribute, None)
+            if difference is None:
+                result[category] = None
+                continue
+            values: dict[str, Any] = {}
+            unit = getattr(difference, "unit", None)
+            if not isinstance(unit, str) or not unit or len(unit) > 16:
+                raise ValueError("Unexpected monthly usage unit.")
+            values["unit"] = unit
+            for field in fields:
+                value = getattr(difference, field, None)
+                if (
+                    isinstance(value, bool)
+                    or not isinstance(value, (int, float))
+                    or not isfinite(value)
+                ):
+                    raise ValueError("Unexpected monthly usage difference.")
+                values[field] = float(value)
+            result[category] = values
+        return result
+
+    async def get_monthly_cost_insights(self, month: str) -> dict[str, Any]:
+        """Read upstream expected and actual monthly costs without account metadata."""
+        self._require_credentials()
+        if not self.bridge.site_reference:
+            raise RuntimeError("Monthly insights require FRANK_ENERGIE_SITE_REFERENCE.")
+        if not isinstance(month, str) or len(month) != 7 or month[4] != "-":
+            raise ValueError("month must be in YYYY-MM format.")
+        try:
+            parsed_month = date.fromisoformat(f"{month}-01")
+        except ValueError as exc:
+            raise ValueError("month must be a valid YYYY-MM calendar month.") from exc
+        if parsed_month.strftime("%Y-%m") != month:
+            raise ValueError("month must be in YYYY-MM format.")
+        async with self.bridge.session() as client:
+            insights = await client.month_insights(self.bridge.site_reference, month)
+        if insights is None:
+            return {"available": False, "month": month}
+        fields = (
+            "expectedCosts",
+            "expectedCostsGas",
+            "expectedCostsFixed",
+            "expectedCostsElectricity",
+            "expectedCostsFeedIn",
+            "expectedCostsUntilLastMeterReading",
+            "actualCostsUntilLastMeterReading",
+        )
+        result: dict[str, Any] = {"available": True, "month": month}
+        for field in fields:
+            value = getattr(insights, field, None)
+            if value is not None and (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not isfinite(value)
+            ):
+                raise ValueError("Unexpected monthly cost value.")
+            result[field] = float(value) if value is not None else None
+        return result
+
+    async def get_period_usage_and_costs(self, start_date: date) -> dict[str, Any]:
+        """Return non-identifying usage and costs for an upstream billing period."""
+        self._require_credentials()
+        if not self.bridge.site_reference:
+            raise RuntimeError("Period access requires FRANK_ENERGIE_SITE_REFERENCE.")
+        if not isinstance(start_date, date) or isinstance(start_date, datetime):
+            raise ValueError("start_date must be a calendar date.")
+        async with self.bridge.session() as client:
+            period = await client.period_usage_and_costs(
+                self.bridge.site_reference, start_date.isoformat()
+            )
+        if period is None:
+            return {"available": False, "start_date": start_date.isoformat()}
+        categories: dict[str, dict[str, Any] | None] = {}
+        for name in ("electricity", "gas", "feed_in"):
+            category = getattr(period, name, None)
+            if category is None:
+                categories[name] = None
+                continue
+            unit = getattr(category, "unit", None)
+            if not isinstance(unit, str) or not unit:
+                raise ValueError("Unexpected period energy unit.")
+            entry: dict[str, Any] = {"unit": unit}
+            for key in ("usage_total", "costs_total"):
+                value = getattr(category, key, None)
+                if value is not None and (
+                    isinstance(value, bool)
+                    or not isinstance(value, (int, float))
+                    or not isfinite(value)
+                ):
+                    raise ValueError("Unexpected period usage or cost total.")
+                entry[key] = float(value) if value is not None else None
+            categories[name] = entry
+        return {
+            "available": True,
+            "start_date": start_date.isoformat(),
+            "categories": categories,
+        }
+
+    async def get_daily_consumption_statistics(
+        self, start_date: date, end_date: date
+    ) -> dict[str, Any]:
+        """Aggregate recorded daily kWh without exposing account identifiers."""
+        self._require_credentials()
+        if not self.bridge.site_reference:
+            raise RuntimeError("Consumption access requires FRANK_ENERGIE_SITE_REFERENCE.")
+        if (
+            not isinstance(start_date, date)
+            or isinstance(start_date, datetime)
+            or not isinstance(end_date, date)
+            or isinstance(end_date, datetime)
+            or end_date < start_date
+            or (end_date - start_date).days > 366
+        ):
+            raise ValueError("Provide an ordered date range of at most 366 days.")
+        async with self.bridge.session() as client:
+            consumption = await client.meter_readings(self.bridge.site_reference)
+        if consumption is None:
+            return {
+                "start_date": start_date.isoformat(),
+                "end_date": end_date.isoformat(),
+                "day_count": 0,
+                "total_kwh": 0.0,
+                "average_daily_kwh": None,
+            }
+        records = getattr(consumption, "daily_consumption", None)
+        if not isinstance(records, list):
+            raise ValueError("Unexpected consumption response structure.")
+        selected: dict[date, float] = {}
+        for record in records:
+            raw_day = getattr(record, "date", None)
+            raw_value = getattr(record, "consumption_kwh", None)
+            if not isinstance(raw_day, str):
+                raise ValueError("Unexpected consumption date.")
+            try:
+                reading_day = date.fromisoformat(raw_day)
+            except ValueError as exc:
+                raise ValueError("Unexpected consumption date.") from exc
+            if reading_day < start_date or reading_day > end_date:
+                continue
+            if (
+                isinstance(raw_value, bool)
+                or not isinstance(raw_value, (int, float))
+                or not isfinite(raw_value)
+                or raw_value < 0
+            ):
+                raise ValueError("Unexpected daily consumption amount.")
+            if reading_day in selected:
+                raise ValueError("Duplicate daily consumption date.")
+            selected[reading_day] = float(raw_value)
+        total = sum(selected.values())
+        return {
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "day_count": len(selected),
+            "total_kwh": total,
+            "average_daily_kwh": total / len(selected) if selected else None,
+        }
+
+    async def get_invoice_statistics(self, year: int) -> dict[str, Any]:
+        """Aggregate invoice amounts for a year without returning invoice IDs."""
+        self._require_credentials()
+        if not self.bridge.site_reference:
+            raise RuntimeError("Invoice access requires FRANK_ENERGIE_SITE_REFERENCE.")
+        if isinstance(year, bool) or not isinstance(year, int) or not 2000 <= year <= 2100:
+            raise ValueError("year must be an integer between 2000 and 2100.")
+        async with self.bridge.session() as client:
+            invoices = await client.invoices(self.bridge.site_reference)
+        records = getattr(invoices, "all_periods_invoices", None)
+        if not isinstance(records, list):
+            raise ValueError("Unexpected invoice response structure.")
+        amounts: list[float] = []
+        for invoice in records:
+            start = getattr(invoice, "StartDate", None)
+            amount = getattr(invoice, "TotalAmount", None)
+            if not isinstance(start, datetime) or start.tzinfo is None:
+                raise ValueError("Unexpected invoice start date.")
+            if isinstance(amount, bool) or not isinstance(amount, (int, float)):
+                raise ValueError("Unexpected invoice amount.")
+            if not isfinite(amount):
+                raise ValueError("Invoice amount must be finite.")
+            if start.astimezone(ZoneInfo("Europe/Amsterdam")).year == year:
+                amounts.append(float(amount))
+        return {
+            "year": year,
+            "invoice_count": len(amounts),
+            "total_amount": sum(amounts),
+            "average_amount": sum(amounts) / len(amounts) if amounts else None,
+        }
+
+    async def get_smart_pv_system_summary(self, device_id: str) -> dict[str, Any]:
+        """Return only status and totals for a PV system, without device IDs."""
+        self._require_credentials()
+        if not isinstance(device_id, str) or not device_id.strip():
+            raise ValueError("device_id must be a non-empty string.")
+        async with self.bridge.session() as client:
+            summary = await client.smart_pv_system_summary(device_id)
+        if summary is None:
+            return {"available": False}
+        from enum import Enum
+
+        result: dict[str, Any] = {"available": True}
+        for field in ("operational_status", "steering_status"):
+            value = getattr(summary, field, None)
+            if not isinstance(value, (str, Enum)):
+                raise ValueError("Unexpected PV system status.")
+            result[field] = str(value.value if isinstance(value, Enum) else value)
+        for field in ("total_bonus", "total_result"):
+            value = getattr(summary, field, None)
+            if value is not None and (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not isfinite(value)
+            ):
+                raise ValueError("Unexpected PV system total.")
+            result[field] = float(value) if value is not None else None
+        return result
+
+    async def get_smart_battery_session_statistics(
+        self, device_id: str, start_date: date, end_date: date
+    ) -> dict[str, Any]:
+        """Summarize a battery's trading sessions without revealing device data."""
+        self._require_credentials()
+        if not isinstance(device_id, str) or not device_id.strip():
+            raise ValueError("device_id must be a non-empty string.")
+        if (
+            not isinstance(start_date, date)
+            or isinstance(start_date, datetime)
+            or not isinstance(end_date, date)
+            or isinstance(end_date, datetime)
+            or end_date < start_date
+            or (end_date - start_date).days > 366
+        ):
+            raise ValueError("Provide an ordered date range of at most 366 days.")
+        async with self.bridge.session() as client:
+            data = await client.smart_battery_sessions(device_id, start_date, end_date)
+        if data is None:
+            return {
+                "available": False,
+                "session_count": 0,
+                "total_session_result": None,
+                "average_session_result": None,
+            }
+        sessions = getattr(data, "sessions", None)
+        if not isinstance(sessions, list):
+            raise ValueError("Unexpected battery sessions response structure.")
+        results: list[float] = []
+        for session in sessions:
+            result = getattr(session, "result", None)
+            if result is None:
+                continue
+            if (
+                isinstance(result, bool)
+                or not isinstance(result, (int, float))
+                or not isfinite(result)
+            ):
+                raise ValueError("Unexpected battery session result.")
+            results.append(float(result))
+        total = sum(results)
+        return {
+            "available": True,
+            "session_count": len(sessions),
+            "result_count": len(results),
+            "total_session_result": total if results else None,
+            "average_session_result": total / len(results) if results else None,
+        }
+
+    async def get_smart_pv_financial_result(self, device_id: str) -> dict[str, Any]:
+        """Read the upstream PV bonus and result without exposing system identifiers."""
+        self._require_credentials()
+        if not isinstance(device_id, str) or not device_id.strip():
+            raise ValueError("device_id must be a non-empty string.")
+        async with self.bridge.session() as client:
+            summary = await client.smart_pv_system_summary(device_id)
+        if summary is None:
+            return {"available": False, "total_bonus": None, "total_result": None}
+        values: dict[str, float | None] = {}
+        for field in ("total_bonus", "total_result"):
+            value = getattr(summary, field, None)
+            if value is not None and (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not isfinite(value)
+            ):
+                raise ValueError("Unexpected smart PV financial result.")
+            values[field] = float(value) if value is not None else None
+        return {"available": True, **values}
+
+    async def get_smart_battery_trading_result(self, device_id: str) -> dict[str, Any]:
+        """Read the upstream cumulative trading result without exposing device data."""
+        self._require_credentials()
+        if not isinstance(device_id, str) or not device_id.strip():
+            raise ValueError("device_id must be a non-empty string.")
+        async with self.bridge.session() as client:
+            details = await client.smart_battery_details(device_id)
+        if details is None:
+            return {"available": False, "total_result": None}
+        summary = getattr(details, "smart_battery_summary", None)
+        if summary is None:
+            raise ValueError("Unexpected smart battery detail response.")
+        result = getattr(summary, "total_result", None)
+        if isinstance(result, bool) or not isinstance(result, (int, float)) or not isfinite(result):
+            raise ValueError("Unexpected smart battery trading result.")
+        return {"available": True, "total_result": float(result)}
+
+    async def get_smart_battery_status(self, device_id: str) -> dict[str, Any]:
+        """Read a battery's current state without exposing identifiers or settings."""
+        self._require_credentials()
+        if not isinstance(device_id, str) or not device_id.strip():
+            raise ValueError("device_id must be a non-empty string.")
+        async with self.bridge.session() as client:
+            details = await client.smart_battery_details(device_id)
+        if details is None:
+            return {"available": False}
+        summary = getattr(details, "smart_battery_summary", None)
+        battery = getattr(details, "smart_battery", None)
+        if summary is None or battery is None:
+            raise ValueError("Unexpected smart battery detail response.")
+        from enum import Enum
+
+        charge = getattr(summary, "last_known_state_of_charge", None)
+        status = getattr(summary, "last_known_status", None)
+        updated = getattr(summary, "last_update", None)
+        capacity = getattr(battery, "capacity", None)
+        if isinstance(charge, bool) or not isinstance(charge, int) or not 0 <= charge <= 100:
+            raise ValueError("Unexpected battery state of charge.")
+        if not isinstance(status, (str, Enum)):
+            raise ValueError("Unexpected battery status.")
+        if not isinstance(updated, datetime) or updated.tzinfo is None:
+            raise ValueError("Unexpected battery update time.")
+        if capacity is not None and (
+            isinstance(capacity, bool)
+            or not isinstance(capacity, (int, float))
+            or not isfinite(capacity)
+            or capacity < 0
+        ):
+            raise ValueError("Unexpected battery capacity.")
+        return {
+            "available": True,
+            "state_of_charge_percent": charge,
+            "status": str(status.value if isinstance(status, Enum) else status),
+            "last_update": updated.isoformat(),
+            "capacity_kwh": float(capacity) if capacity is not None else None,
+        }
 
     async def get_account(self) -> Any:
         """Return account data for the configured delivery site."""
@@ -244,9 +1256,7 @@ def _average_series(intervals: list[dict[str, Any]], day: date) -> dict[str, Any
     start = datetime(day.year, day.month, day.day, tzinfo=local_zone).astimezone(UTC)
     next_day = day + timedelta(days=1)
     end = datetime(next_day.year, next_day.month, next_day.day, tzinfo=local_zone).astimezone(UTC)
-    ordered = sorted(
-        intervals, key=lambda interval: datetime.fromisoformat(interval["date_from"])
-    )
+    ordered = sorted(intervals, key=lambda interval: datetime.fromisoformat(interval["date_from"]))
     observed_seconds = 0.0
     previous_end: datetime | None = None
     for interval in ordered:
@@ -275,7 +1285,9 @@ def _average_series(intervals: list[dict[str, Any]], day: date) -> dict[str, Any
         "status": (
             "empty"
             if not ordered
-            else "complete" if observed_seconds == day_seconds else "incomplete"
+            else "complete"
+            if observed_seconds == day_seconds
+            else "incomplete"
         ),
     }
 
@@ -295,9 +1307,7 @@ def _extreme_period(
     step_seconds = step_minutes * 60
     for index in range(len(ordered) - window_size + 1):
         window = ordered[index : index + window_size]
-        starts = [
-            datetime.fromisoformat(entry["date_from"]).astimezone(UTC) for entry in window
-        ]
+        starts = [datetime.fromisoformat(entry["date_from"]).astimezone(UTC) for entry in window]
         ends = [datetime.fromisoformat(entry["date_till"]).astimezone(UTC) for entry in window]
         if any(
             (end - start).total_seconds() != step_seconds

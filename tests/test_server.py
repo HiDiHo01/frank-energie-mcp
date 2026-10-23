@@ -18,8 +18,8 @@ def test_server_name() -> None:
 
 
 @pytest.mark.asyncio
-async def test_registers_eleven_tools() -> None:
-    """Expose all eleven documented tools."""
+async def test_registers_forty_tools() -> None:
+    """Expose all forty documented tools."""
     server = create_server(AsyncMock())
     tools = await server.list_tools()
     assert {tool.name for tool in tools} == {
@@ -32,6 +32,39 @@ async def test_registers_eleven_tools() -> None:
         "get_highest_price",
         "get_lowest_period",
         "get_highest_period",
+        "get_best_start_time",
+        "calculate_energy_cost",
+        "get_price_threshold_periods",
+        "get_best_split_periods",
+        "calculate_battery_savings",
+        "get_negative_price_periods",
+        "get_price_trend",
+        "get_price_volatility",
+        "compare_days",
+        "get_price_statistics",
+        "get_smart_battery_count",
+        "get_smart_pv_system_count",
+        "get_electric_vehicle_count",
+        "get_smart_feed_in_status",
+        "get_contract_price_resolution_state",
+        "get_invoice_statistics",
+        "get_smart_pv_system_summary",
+        "get_smart_battery_status",
+        "get_smart_hvac_status",
+        "get_daily_consumption_statistics",
+        "get_smart_battery_session_statistics",
+        "get_period_usage_and_costs",
+        "get_ev_charger_statistics",
+        "get_monthly_cost_insights",
+        "get_account_country",
+        "get_smart_battery_fleet_statistics",
+        "get_electric_vehicle_statistics",
+        "get_smart_pv_fleet_statistics",
+        "get_current_month_cost_summary",
+        "get_smart_battery_trading_result",
+        "get_smart_pv_financial_result",
+        "get_monthly_usage_differences",
+        "get_smart_pv_operational_status",
         "get_account",
         "list_sites",
     }

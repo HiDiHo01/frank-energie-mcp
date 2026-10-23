@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import os
 from collections.abc import Awaitable, Callable
-from datetime import date
+from datetime import date, datetime
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
@@ -140,9 +140,268 @@ def create_server(
         )
 
     @server.tool()
+    async def get_best_start_time(
+        duration_minutes: int,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+        earliest_start: datetime | None = None,
+        latest_end: datetime | None = None,
+    ) -> object:
+        """Find the cheapest continuous start time, optionally bounded by timestamps."""
+        return await safe_tool_call(
+            lambda: energy_service.get_best_start_time(
+                duration_minutes, day, resolution, earliest_start, latest_end
+            )
+        )
+
+    @server.tool()
+    async def calculate_energy_cost(
+        power_kw: float,
+        duration_minutes: int,
+        start_time: datetime,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Estimate cost for constant-power electricity usage at a given start time."""
+        return await safe_tool_call(
+            lambda: energy_service.calculate_energy_cost(
+                power_kw, duration_minutes, start_time, resolution
+            )
+        )
+
+    @server.tool()
+    async def get_price_threshold_periods(
+        threshold: float,
+        below: bool = True,
+        minimum_duration_minutes: int = 15,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Find consecutive electricity and gas periods below or above a total price."""
+        return await safe_tool_call(
+            lambda: energy_service.get_price_threshold_periods(
+                threshold, below, minimum_duration_minutes, day, resolution
+            )
+        )
+
+    @server.tool()
+    async def get_best_split_periods(
+        total_minutes: int,
+        minimum_block_minutes: int,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Select cheapest nonoverlapping fixed-length price blocks."""
+        return await safe_tool_call(
+            lambda: energy_service.get_best_split_periods(
+                total_minutes, minimum_block_minutes, day, resolution
+            )
+        )
+
+    @server.tool()
+    async def calculate_battery_savings(
+        capacity_kwh: float,
+        charge_power_kw: float,
+        discharge_power_kw: float,
+        round_trip_efficiency: float,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Estimate idealized one-cycle battery savings from public electricity prices."""
+        return await safe_tool_call(
+            lambda: energy_service.calculate_battery_savings(
+                capacity_kwh,
+                charge_power_kw,
+                discharge_power_kw,
+                round_trip_efficiency,
+                day,
+                resolution,
+            )
+        )
+
+    @server.tool()
+    async def get_negative_price_periods(
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+        minimum_duration_minutes: int = 15,
+    ) -> object:
+        """Find consecutive negative electricity-price periods."""
+        return await safe_tool_call(
+            lambda: energy_service.get_negative_price_periods(
+                day, resolution, minimum_duration_minutes
+            )
+        )
+
+    @server.tool()
+    async def get_price_trend(
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+        stable_tolerance: float = 0.005,
+    ) -> object:
+        """Classify first-to-last daily price movement."""
+        return await safe_tool_call(
+            lambda: energy_service.get_price_trend(day, resolution, stable_tolerance)
+        )
+
+    @server.tool()
+    async def get_price_volatility(
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Return daily spread and consecutive price changes."""
+        return await safe_tool_call(lambda: energy_service.get_price_volatility(day, resolution))
+
+    @server.tool()
+    async def get_price_statistics(
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Return daily price percentiles and descriptive statistics."""
+        return await safe_tool_call(lambda: energy_service.get_price_statistics(day, resolution))
+
+    @server.tool()
+    async def compare_days(
+        first_day: date,
+        second_day: date,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Compare total price distributions for two Amsterdam calendar days."""
+        return await safe_tool_call(
+            lambda: energy_service.compare_days(first_day, second_day, resolution)
+        )
+
+    @server.tool()
     async def get_gas_price(resolution: PriceResolution = "PT15M") -> object:
         """Get today's pricing data including gas prices."""
         return await safe_tool_call(lambda: energy_service.get_gas_price(resolution=resolution))
+
+    @server.tool()
+    async def get_smart_battery_fleet_statistics() -> object:
+        """Summarize linked battery fleet capacity and rated power."""
+        return await safe_tool_call(energy_service.get_smart_battery_fleet_statistics)
+
+    @server.tool()
+    async def get_smart_battery_count() -> object:
+        """Count linked smart batteries without returning device identifiers."""
+        return await safe_tool_call(energy_service.get_smart_battery_count)
+
+    @server.tool()
+    async def get_smart_pv_fleet_statistics() -> object:
+        """Aggregate linked solar panel groups and declared PV capacity."""
+        return await safe_tool_call(energy_service.get_smart_pv_fleet_statistics)
+
+    @server.tool()
+    async def get_smart_pv_system_count() -> object:
+        """Count linked smart solar PV systems without returning device identifiers."""
+        return await safe_tool_call(energy_service.get_smart_pv_system_count)
+
+    @server.tool()
+    async def get_electric_vehicle_statistics() -> object:
+        """Count linked vehicles, reachable vehicles and smart charging states."""
+        return await safe_tool_call(energy_service.get_electric_vehicle_statistics)
+
+    @server.tool()
+    async def get_electric_vehicle_count() -> object:
+        """Count linked electric vehicles without returning device identifiers."""
+        return await safe_tool_call(energy_service.get_electric_vehicle_count)
+
+    @server.tool()
+    async def get_smart_hvac_status() -> object:
+        """Read smart HVAC activation and country availability without user data."""
+        return await safe_tool_call(energy_service.get_smart_hvac_status)
+
+    @server.tool()
+    async def get_smart_feed_in_status() -> object:
+        """Read privacy-filtered smart feed-in enrollment status."""
+        return await safe_tool_call(energy_service.get_smart_feed_in_status)
+
+    @server.tool()
+    async def get_contract_price_resolution_state(connection_id: str) -> object:
+        """Read contract resolution options without requesting any changes."""
+        return await safe_tool_call(
+            lambda: energy_service.get_contract_price_resolution_state(connection_id)
+        )
+
+    @server.tool()
+    async def get_ev_charger_statistics(start_date: date) -> object:
+        """Count EV chargers, reachability and smart charging capabilities."""
+        return await safe_tool_call(lambda: energy_service.get_ev_charger_statistics(start_date))
+
+    @server.tool()
+    async def get_account_country() -> object:
+        """Read the account country code without disclosing personal information."""
+        return await safe_tool_call(energy_service.get_account_country)
+
+    @server.tool()
+    async def get_current_month_cost_summary() -> object:
+        """Read current-month expected and actual costs without identifiers."""
+        return await safe_tool_call(energy_service.get_current_month_cost_summary)
+
+    @server.tool()
+    async def get_monthly_usage_differences(month: str) -> object:
+        """Read upstream actual and expected usage differences for a month."""
+        return await safe_tool_call(lambda: energy_service.get_monthly_usage_differences(month))
+
+    @server.tool()
+    async def get_monthly_cost_insights(month: str) -> object:
+        """Get upstream monthly expected and actual costs without customer metadata."""
+        return await safe_tool_call(lambda: energy_service.get_monthly_cost_insights(month))
+
+    @server.tool()
+    async def get_period_usage_and_costs(start_date: date) -> object:
+        """Read upstream period electricity, gas and feed-in usage and costs."""
+        return await safe_tool_call(lambda: energy_service.get_period_usage_and_costs(start_date))
+
+    @server.tool()
+    async def get_daily_consumption_statistics(start_date: date, end_date: date) -> object:
+        """Aggregate daily meter readings in an inclusive calendar-date range."""
+        return await safe_tool_call(
+            lambda: energy_service.get_daily_consumption_statistics(start_date, end_date)
+        )
+
+    @server.tool()
+    async def get_invoice_statistics(year: int) -> object:
+        """Aggregate invoice totals for a year without invoice identifiers."""
+        return await safe_tool_call(lambda: energy_service.get_invoice_statistics(year))
+
+    @server.tool()
+    async def get_smart_pv_system_summary(device_id: str) -> object:
+        """Read allowlisted PV system status and totals without identifiers."""
+        return await safe_tool_call(lambda: energy_service.get_smart_pv_system_summary(device_id))
+
+    @server.tool()
+    async def get_smart_battery_session_statistics(
+        device_id: str, start_date: date, end_date: date
+    ) -> object:
+        """Aggregate battery trading results over an inclusive date range."""
+        return await safe_tool_call(
+            lambda: energy_service.get_smart_battery_session_statistics(
+                device_id, start_date, end_date
+            )
+        )
+
+    @server.tool()
+    async def get_smart_pv_operational_status(device_id: str) -> object:
+        """Read a linked PV system's operational and steering status."""
+        return await safe_tool_call(
+            lambda: energy_service.get_smart_pv_operational_status(device_id)
+        )
+
+    @server.tool()
+    async def get_smart_pv_financial_result(device_id: str) -> object:
+        """Read a linked PV system's cumulative bonus and result."""
+        return await safe_tool_call(lambda: energy_service.get_smart_pv_financial_result(device_id))
+
+    @server.tool()
+    async def get_smart_battery_trading_result(device_id: str) -> object:
+        """Read the cumulative trading result for one linked smart battery."""
+        return await safe_tool_call(
+            lambda: energy_service.get_smart_battery_trading_result(device_id)
+        )
+
+    @server.tool()
+    async def get_smart_battery_status(device_id: str) -> object:
+        """Read state of charge, status and capacity of one linked battery."""
+        return await safe_tool_call(lambda: energy_service.get_smart_battery_status(device_id))
 
     @server.tool()
     async def get_account() -> object:
@@ -166,8 +425,12 @@ def create_server(
             "Read-only Frank Energie market prices are available through "
             "get_current_prices, get_today_prices, get_tomorrow_prices, "
             "get_average_prices, get_lowest_price, get_highest_price, "
-            "get_lowest_period, get_highest_period, and get_gas_price. "
-            "Account access requires authentication."
+            "get_lowest_period, get_highest_period, get_best_start_time, "
+            "calculate_energy_cost, get_price_threshold_periods, "
+            "get_best_split_periods, calculate_battery_savings, and get_gas_price. "
+            "Authenticated device counts are available through "
+            "get_smart_battery_count, get_smart_pv_system_count, and "
+            "get_electric_vehicle_count. Account access requires authentication."
         )
 
     @server.prompt()

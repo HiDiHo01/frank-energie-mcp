@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Eleven read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Forty-four read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -24,7 +24,36 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_highest_price` | `get_highest_price(day, resolution)` | Maximum total interval for each energy type, with coverage metadata. |
 | `get_lowest_period` | `get_lowest_period(period_minutes, day, resolution)` | Cheapest uninterrupted fixed-duration window for electricity and gas, selected by arithmetic mean of normalized `total`. |
 | `get_highest_period` | `get_highest_period(period_minutes, day, resolution)` | Most expensive uninterrupted fixed-duration window, with the same response contract. |
+| `get_best_start_time` | `get_best_start_time(duration_minutes, day, resolution, earliest_start, latest_end)` | Per-energy cheapest uninterrupted window or `null` |
+| `calculate_energy_cost` | `calculate_energy_cost(power_kw, duration_minutes, start_time, resolution)` | Electricity `status`, `cost`, `energy_kwh` |
+| `get_price_threshold_periods` | `get_price_threshold_periods(threshold, below, minimum_duration_minutes, day, resolution)` | Per-energy arrays of qualifying periods |
+| `get_negative_price_periods` | `get_negative_price_periods(day, resolution, minimum_duration_minutes)` | Electricity-only array of negative-price periods |
+| `get_price_trend` | `get_price_trend(day, resolution, stable_tolerance)` | Per-energy direction, change and gap indicator |
+| `get_price_volatility` | `get_price_volatility(day, resolution)` | Per-energy dispersion and adjacent changes |
+| `compare_days` | `compare_days(first_day, second_day, resolution)` | Two days of per-energy statistics and mean differences |
+| `get_best_split_periods` | `get_best_split_periods(total_minutes, minimum_block_minutes, day, resolution)` | Per-energy selected blocks and status |
+| `calculate_battery_savings` | `calculate_battery_savings(capacity_kwh, charge_power_kw, discharge_power_kw, round_trip_efficiency, day, resolution)` | Electricity one-cycle estimate and assumptions |
+| `get_price_statistics` | `get_price_statistics(day, resolution)` | Per-energy descriptive statistics |
 | `get_gas_price` | `get_gas_price(resolution)` | Normalized active gas interval or `null` |
+| `get_smart_battery_count` | `get_smart_battery_count()` | Authenticated `{"count": N}` from upstream `smart_batteries()` |
+| `get_smart_pv_system_count` | `get_smart_pv_system_count()` | Authenticated `{"count": N}` from upstream `smart_pv_systems()` |
+| `get_electric_vehicle_count` | `get_electric_vehicle_count()` | Authenticated `{"count": N}` from upstream `enode_vehicles()` |
+| `get_smart_feed_in_status` | `get_smart_feed_in_status()` | Authenticated, allowlisted boolean enrollment flags |
+| `get_contract_price_resolution_state` | `get_contract_price_resolution_state(connection_id)` | Authenticated, allowlisted contract resolution options |
+| `get_invoice_statistics` | `get_invoice_statistics(year)` | Authenticated annual invoice count, total and average |
+| `get_smart_pv_system_summary` | `get_smart_pv_system_summary(device_id)` | Authenticated, allowlisted PV status and totals |
+| `get_smart_battery_status` | `get_smart_battery_status(device_id)` | Authenticated battery charge, status, update timestamp and capacity |
+| `get_smart_hvac_status` | `get_smart_hvac_status()` | Authenticated HVAC activation and country-availability flags |
+| `get_daily_consumption_statistics` | `get_daily_consumption_statistics(start_date, end_date)` | Authenticated daily kWh count, total and average over an inclusive range |
+| `get_smart_battery_session_statistics` | `get_smart_battery_session_statistics(device_id, start_date, end_date)` | Authenticated session count and aggregate trading results |
+| `get_period_usage_and_costs` | `get_period_usage_and_costs(start_date)` | Authenticated billing-period usage and cost totals by energy category |
+| `get_ev_charger_statistics` | `get_ev_charger_statistics(start_date)` | Authenticated EV charger reachability and smart charging counts |
+| `get_monthly_cost_insights` | `get_monthly_cost_insights(month)` | Authenticated monthly expected and actual cost totals |
+| `get_account_country` | `get_account_country()` | Authenticated two-letter account country code |
+| `get_smart_battery_fleet_statistics` | `get_smart_battery_fleet_statistics()` | Aggregate linked battery capacity and rated power |
+| `get_electric_vehicle_statistics` | `get_electric_vehicle_statistics()` | Authenticated vehicle reachability and smart charging counts |
+| `get_smart_pv_fleet_statistics` | `get_smart_pv_fleet_statistics()` | Aggregate PV panel group counts and declared capacity |
+| `get_current_month_cost_summary` | `get_current_month_cost_summary()` | Authenticated current-month cost and completeness summary |
 | `get_account` | `get_account()` | After a successful authenticated account request, returns only `{"authenticated": true}`; account details are deliberately not exposed |
 | `list_sites` | `list_sites()` | `{"count": N}` for a recognized site collection; site identifiers and addresses are not exposed |
 
@@ -128,6 +157,248 @@ it does not filter to future intervals. Coverage status describes the
 whole day, not whether a matching period was found. DST days use elapsed
 UTC duration and never fabricate missing records.
 
+## Optimization tool contracts
+
+The server also registers `get_best_start_time`,
+`calculate_energy_cost`, `get_price_threshold_periods`,
+`get_best_split_periods`, and `calculate_battery_savings`.
+All operate on normalized `total` values from one upstream
+`prices(day, resolution=...)` call, without recomputing tax or markup.
+
+Time windows must contain contiguous, full-resolution intervals and
+fit within the selected Amsterdam calendar day. `get_best_start_time`
+returns the cheapest window for each energy type (or `null`); optional
+aware `earliest_start` and `latest_end` restrict candidate windows.
+`calculate_energy_cost` returns `status`, `cost`, and
+`energy_kwh` for a constant electrical power; incomplete data yield
+null amounts. `get_price_threshold_periods` returns arrays of
+strictly qualifying contiguous periods. `get_best_split_periods`
+returns `status`, `periods`, and `average_total`; missing complete
+blocks produce `incomplete`. The split selection is a cheapest-first
+block heuristic, not a globally optimal solution for arbitrary
+scheduling constraints.
+
+`calculate_battery_savings` returns a `status`, optional `cycle`,
+and explicit `assumptions`. The cycle contains charge/discharge
+windows, charge cost, avoided discharge cost, and estimated savings.
+It is an idealized single-cycle model, without a load profile, grid
+fees, battery wear or export modeling; results may be negative.
+The battery power limits are approximated at whole-resolution windows.
+
+## Additional analytics contracts
+
+`get_negative_price_periods(day=None, resolution="PT15M",
+minimum_duration_minutes=15)` returns electricity periods strictly
+below zero. `get_price_trend(day=None, resolution="PT15M",
+stable_tolerance=0.005)` classifies the difference between the last
+and first available normalized total; its direction is `rising`,
+`falling`, `stable` or `insufficient_data`. It also reports gaps.
+`get_price_volatility` returns population standard deviation, spread,
+largest adjacent increase/decrease and mean absolute adjacent change;
+nonadjacent intervals are excluded from difference calculations.
+`get_price_statistics` returns count, mean, median, minimum, maximum,
+range, population standard deviation and linearly interpolated p25/p75.
+`compare_days(first_day, second_day, resolution="PT15M")` returns
+both days' statistics and second-minus-first mean differences for each
+energy type. Empty datasets produce null statistics; these functions
+do not impute missing prices.
+
+## Parameter and response reference
+
+- `day` defaults to today's calendar date in `Europe/Amsterdam`;
+  `first_day` and `second_day` are required ISO calendar dates.
+- `resolution` is `PT15M` (15-minute bins) or `PT60M` (hourly bins).
+  Window durations must be positive multiples of that bin size.
+- `earliest_start`, `latest_end`, and `start_time` require timezone-aware
+  ISO timestamps. A requested cost window must fit within one local day.
+- `below=true` means strictly less than the threshold; `below=false`
+  means strictly greater. Negative-price periods are strictly below zero.
+- `stable_tolerance` is a nonnegative absolute difference in the upstream
+  price unit. Trend classification compares the first and last *available*
+  interval, not a fitted regression slope.
+- `get_price_statistics` uses population standard deviation and linearly
+  interpolated p25/p75. Missing datasets return `count=0` and null
+  descriptive values.
+- `get_price_volatility` only calculates changes between immediately
+  adjacent price intervals. Gaps do not contribute changes.
+- `get_best_split_periods` uses cheapest-first, fixed-size nonoverlapping
+  blocks; `total_minutes` must be divisible by `minimum_block_minutes`.
+  This heuristic is not a general constrained scheduling optimizer.
+- `calculate_battery_savings` assumes one charge-before-discharge cycle
+  and simplified full-bin power constraints. The response is an estimate,
+  not a guaranteed bill saving.
+
+For all daily analytics, electricity and gas prices have different physical
+units; their numeric results should not be combined. The normalized `total`
+comes from upstream data. The server does not independently derive taxes,
+markups or supplier-specific billing terms.
+
+## Authenticated device-count contracts
+
+The three device-count tools have no arguments. They require server-side
+Frank Energie credentials and return only a nonnegative integer count
+in `{"count": N}`. They call the upstream `smart_batteries()`,
+`smart_pv_systems()` and `enode_vehicles()` methods, respectively.
+A `None` upstream result is represented as zero; unexpected collection
+shapes raise an error. Raw device objects, IDs and account metadata
+are never serialized into MCP responses. These operations are read-only.
+
+## Additional authenticated status contracts
+
+`get_smart_feed_in_status()` returns `available` and four
+allowlisted boolean flags: `is_activated`, `has_accepted_terms`,
+`is_app_onboarding_available`, `is_available_in_country`. When the
+upstream response is null, flags are null and `available=false`.
+
+`get_contract_price_resolution_state(connection_id)` requires a
+nonempty connection ID, returns `available`, `active_option`,
+`available_options` and `is_change_request_possible`. A null
+upstream state yields `{"available": false}`. Neither endpoint
+returns user IDs, connection IDs or raw upstream account objects.
+No contract-changing API method is exposed.
+
+## Annual invoices and PV status contracts
+
+`get_invoice_statistics(year)` accepts an integer from 2000 through
+2100. It requires credentials and a configured site reference.
+The result contains `year`, `invoice_count`, `total_amount`
+and `average_amount` (null if no invoices qualify). The year is
+determined from each upstream invoice start date converted to the
+Amsterdam timezone. Invoice identifiers and descriptions are excluded.
+
+`get_smart_pv_system_summary(device_id)` requires credentials and
+a nonempty device ID. It returns only `available`,
+`operational_status`, `steering_status`, `total_bonus` and
+`total_result`. Missing upstream summaries return
+`{"available": false}`. Neither method writes upstream state.
+
+## Smart battery status contract
+
+`get_smart_battery_status(device_id)` requires credentials and a
+nonempty device ID. It returns `available`,
+`state_of_charge_percent`, `status`, `last_update`, and
+`capacity_kwh`. Charge is validated as an integer in 0–100,
+capacity is nonnegative and finite when provided, and timestamps
+must be timezone-aware. A null upstream detail result returns
+`{"available": false}`. The response excludes device identifiers
+and configuration, and never invokes upstream write operations.
+
+## Smart HVAC status contract
+
+`get_smart_hvac_status()` requires Frank Energie credentials. It
+returns `available: bool`, `is_activated: bool | null`, and
+`is_available_in_country: bool | null`. Null upstream enrollment
+produces `available=false` with null flags. User identifiers and
+creation timestamps are excluded; no HVAC mutation is invoked.
+
+## Daily consumption statistics contract
+
+`get_daily_consumption_statistics(start_date, end_date)` accepts
+two ISO calendar dates, inclusive, with `end_date >= start_date`
+and a maximum span of 366 days. It requires credentials and a
+configured delivery-site reference. It returns `start_date`,
+`end_date`, `day_count`, `total_kwh` and
+`average_daily_kwh` (null for zero observed days).
+Only upstream days present in the requested range are aggregated;
+missing days do not count as zero. User identifiers and individual
+readings are not returned. The operation is read-only.
+
+## Battery trading-session statistics contract
+
+`get_smart_battery_session_statistics(device_id, start_date, end_date)`
+requires credentials, a nonempty device ID, and an inclusive
+ordered date range no longer than 366 days. It returns
+`available`, `session_count`, `result_count`,
+`total_session_result` and `average_session_result`.
+Null session results are omitted from the aggregate; missing
+or empty results produce null total and average. Nonfinite
+results are rejected. Device identifiers and individual
+trading sessions are excluded. No upstream mutation is called.
+
+## Billing-period usage and costs contract
+
+`get_period_usage_and_costs(start_date)` requires credentials,
+a configured delivery-site reference, and an ISO calendar date.
+It returns `available`, `start_date`, and when available
+`categories` containing `electricity`, `gas`, and `feed_in`
+with `unit`, `usage_total`, and `costs_total`.
+Missing categories are null; missing periods return
+`{"available": false, "start_date": "..."}`.
+Nonfinite totals and invalid units are rejected. Raw period
+identifiers, individual usage items and customer data are omitted.
+No upstream write operation is invoked.
+
+## EV charger statistics contract
+
+`get_ev_charger_statistics(start_date)` requires credentials,
+a configured delivery-site reference, and an ISO calendar date.
+It returns nonnegative integer counts: `charger_count`,
+`reachable_count`, `smart_capable_count`, and
+`smart_enabled_count`. Invalid boolean capability fields
+are rejected. Device IDs, intervention records, and raw
+charging settings are excluded. No upstream mutation is called.
+
+## Monthly cost insights contract
+
+`get_monthly_cost_insights(month)` accepts a strictly formatted
+`YYYY-MM` calendar month and requires credentials and a site
+reference. It delegates to upstream `month_insights` and
+returns `available`, `month`, and the seven allowlisted
+expected/actual cost fields. Absent upstream data produces
+`available=false`. Nonfinite values are rejected.
+Invoice identifiers, personal metadata and raw model data
+are excluded. This tool is read-only.
+
+## Account country contract
+
+`get_account_country()` requires account credentials and calls
+upstream `user_country()`. It returns exactly one field,
+`country_code`, containing a validated uppercase two-letter
+ASCII code. Invalid or missing codes are rejected. User IDs,
+email addresses and other account details are not returned.
+A site reference is not required. The tool is read-only.
+
+## Smart battery fleet statistics contract
+
+`get_smart_battery_fleet_statistics()` requires credentials
+and calls upstream `smart_batteries()`. It returns the total
+battery count, number with reported capacity, summed capacity
+in upstream kWh, and summed maximum charge/discharge power
+in upstream units. Missing values are excluded, and totals
+without observations are null. Nonfinite or negative values
+are rejected. Device identifiers and configuration are excluded.
+No battery mutations are invoked.
+
+## Electric vehicle statistics contract
+
+`get_electric_vehicle_statistics()` requires credentials and
+delegates to upstream `enode_vehicles()`. It returns integer
+counts for linked, reachable, smart-charge-capable and
+smart-charging-enabled vehicles. Invalid boolean flags are
+rejected. Vehicle identifiers and settings are excluded.
+A site reference is not required. No upstream write is called.
+
+## Smart PV fleet statistics contract
+
+`get_smart_pv_fleet_statistics()` requires credentials and
+delegates to upstream `smart_pv_systems()`. It returns system
+and panel-group counts, the number of groups with reported
+panel counts or capacities, summed panel count and summed
+capacity in kWp. Missing values are excluded; totals with
+no observations are null. Negative and nonfinite values are
+rejected. System IDs, connection identifiers and serial
+numbers are not returned. No upstream mutation is invoked.
+
+## Current month summary contract
+
+`get_current_month_cost_summary()` requires credentials and
+a delivery-site reference, calls upstream `month_summary()`,
+and returns `available`, allowlisted cost totals, expected
+costs per day, meter-reading completeness and `gas_excluded`.
+Absent data returns `available=false`; nonfinite values
+are rejected. User IDs and meter-reading dates are excluded.
+Upstream availability depends on API schema support.
+
 ## Authentication and upstream access
 
 `FrankEnergieLibraryBridge` creates an upstream `python-frank-energie` client per request, optionally logs in, and closes the client in a `finally` block.
@@ -166,3 +437,33 @@ The test suite covers service delegation, upstream call signatures, session clea
 2. Validate end-to-end MCP calls over stdio and loopback Streamable HTTP.
 3. Review authentication lifecycle, client authorization for any external deployment, and error handling.
 4. Align tool names and account/site output contracts with intended client functionality.
+
+## Smart battery trading result
+
+`get_smart_battery_trading_result(device_id)` requires credentials and
+returns `{available: bool, total_result: number | null}`. It delegates to
+upstream `smart_battery_details()` and rejects invalid or nonfinite
+results. The device ID is an input only and is not echoed in the response.
+
+## Smart PV financial result
+
+`get_smart_pv_financial_result(device_id)` requires credentials and
+returns `{available: bool, total_bonus: number | null, total_result: number | null}`.
+It uses the upstream PV summary model and rejects nonfinite totals.
+Device identifiers are accepted only as input and are not echoed.
+
+## Monthly usage differences
+
+`get_monthly_usage_differences(month: str)` requires `YYYY-MM`, account
+credentials and a configured site reference. It returns `available`,
+`month` and `electricity`, `gas`, `feed_in` blocks. Each non-null block
+contains `unit`, `actualUsage`, `actualAverageUnitPrice`, `actualCosts`,
+`expectedUsage`, `expectedAverageUnitPrice` and `expectedCosts` directly
+from upstream `month_insights()`. No account identifiers are exposed.
+
+## Smart PV operational status
+
+`get_smart_pv_operational_status(device_id)` requires credentials and
+returns `available`, `operational_status`, `steering_status` and
+`operational_status_timestamp` when available. Status strings come from
+the upstream PV summary model. The device ID is not echoed.

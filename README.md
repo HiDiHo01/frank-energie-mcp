@@ -60,7 +60,36 @@ The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol e
 | Tool | `get_highest_price` | Highest available normalized total interval per energy type, with coverage status. |
 | Tool | `get_lowest_period` | Finds the cheapest uninterrupted window by average normalized total price. |
 | Tool | `get_highest_period` | Finds the most expensive uninterrupted window by average normalized total price. |
+| Tool | `get_best_start_time` | Finds the cheapest fully covered start window within optional time bounds. |
+| Tool | `calculate_energy_cost` | Estimates constant-power electricity consumption cost over a complete window. |
+| Tool | `get_price_threshold_periods` | Groups consecutive intervals strictly below or above a threshold. |
+| Tool | `get_negative_price_periods` | Finds consecutive negative-total electricity-price intervals. |
+| Tool | `get_price_trend` | Classifies the first-to-last available price change. |
+| Tool | `get_price_volatility` | Reports price dispersion and adjacent interval changes. |
+| Tool | `compare_days` | Compares two dates' price statistics and mean differences. |
+| Tool | `get_best_split_periods` | Selects inexpensive nonoverlapping fixed-length blocks. |
+| Tool | `calculate_battery_savings` | Estimates a single idealized battery charge/discharge cycle. |
+| Tool | `get_price_statistics` | Reports mean, median, quartiles and dispersion. |
 | Tool | `get_gas_price` | Returns the current gas interval or `null` when unavailable |
+| Tool | `get_smart_battery_count` | Returns only the number of linked smart batteries; requires credentials. |
+| Tool | `get_smart_pv_system_count` | Returns only the number of linked smart PV systems; requires credentials. |
+| Tool | `get_electric_vehicle_count` | Returns only the number of linked Enode vehicles; requires credentials. |
+| Tool | `get_smart_feed_in_status` | Read-only feed-in enrollment flags, without user IDs. |
+| Tool | `get_contract_price_resolution_state` | Read active and available contract resolution options using a connection ID; does not change settings. |
+| Tool | `get_invoice_statistics` | Aggregates invoice totals for a calendar year; requires credentials and site reference. |
+| Tool | `get_smart_pv_system_summary` | Reads allowlisted operational/steering status and PV totals; requires credentials and device ID. |
+| Tool | `get_smart_battery_status` | Read a linked battery's state of charge, status, update time and capacity. |
+| Tool | `get_smart_hvac_status` | Read smart HVAC activation and country availability without personal data. |
+| Tool | `get_daily_consumption_statistics` | Aggregate recorded daily consumption (kWh) over an inclusive date range. |
+| Tool | `get_smart_battery_session_statistics` | Aggregate trading-session results for one battery and date range. |
+| Tool | `get_period_usage_and_costs` | Read electricity, gas and feed-in usage/cost totals for a billing period. |
+| Tool | `get_ev_charger_statistics` | Count linked EV chargers, reachable devices and smart charging capabilities. |
+| Tool | `get_monthly_cost_insights` | Read expected and actual cost totals for a selected month. |
+| Tool | `get_account_country` | Read the authenticated account's two-letter country code. |
+| Tool | `get_smart_battery_fleet_statistics` | Aggregate linked battery capacity and rated charge/discharge power. |
+| Tool | `get_electric_vehicle_statistics` | Count linked vehicles, reachability and smart charging capability. |
+| Tool | `get_smart_pv_fleet_statistics` | Aggregate solar panel groups, declared panel counts and PV capacity. |
+| Tool | `get_current_month_cost_summary` | Read current-month expected/actual costs and meter-reading completeness. |
 | Tool | `get_account` | Requires credentials and a site reference; returns only `{"authenticated": true}` after a successful account request |
 | Tool | `list_sites` | Requires credentials; returns only the number of recognized delivery sites |
 | Resource | `frank-energie://capabilities` | Static description of capabilities |
@@ -130,6 +159,351 @@ filled. The search uses the entire requested calendar day and does not
 restrict today's result to future intervals. Equal averages prefer the
 earliest window. See [MCP_SPEC.md](MCP_SPEC.md).
 
+## Optimization tools
+
+Five additional read-only tools use normalized public `total` prices:
+
+| Tool | Parameters | Result |
+| --- | --- | --- |
+| `get_best_start_time` | `duration_minutes`, optional `day`, `resolution`, `earliest_start`, `latest_end` | Cheapest fully covered consecutive interval window per energy type, or `null` |
+| `calculate_energy_cost` | `power_kw`, `duration_minutes`, `start_time`, optional `resolution` | Constant-power electricity estimate in kWh and currency-per-kWh × kWh; `incomplete` if any bin is missing |
+| `get_price_threshold_periods` | `threshold`, optional `below`, `minimum_duration_minutes`, `day`, `resolution` | Consecutive groups strictly below/above the price threshold for electricity and gas |
+| `get_best_split_periods` | `total_minutes`, `minimum_block_minutes`, optional `day`, `resolution` | Cheapest nonoverlapping fixed-size blocks; all blocks must be available |
+| `calculate_battery_savings` | `capacity_kwh`, `charge_power_kw`, `discharge_power_kw`, `round_trip_efficiency`, optional `day`, `resolution` | Estimated one-cycle charge-before-discharge price arbitrage for electricity |
+
+Dates default to today in `Europe/Amsterdam`. Datetime inputs must
+include a UTC offset. All durations are in minutes and must be divisible
+by the selected resolution. The electricity cost estimator requires the
+entire requested interval to fit within one local calendar day.
+`get_best_split_periods` selects whole fixed-length blocks; it does
+not model partial or interruptible loads within blocks.
+
+The battery calculation is a **simplified estimate**, not a dispatch
+optimizer: it assumes one charge/discharge cycle, constant price per
+interval, idealized energy transfer at the specified round-trip
+efficiency, and no standing charges, battery degradation, export
+restrictions, household demand profile or dynamic power throttling.
+Do not use it as a guaranteed savings forecast.
+
+## Practical MCP tool calls
+
+The following are example tool **arguments**, not live prices. The MCP client
+invokes the named tool; these JSON objects are not shell commands.
+
+**Find the cheapest four consecutive hours:**
+
+```json
+{"period_minutes": 240, "day": "2026-10-23", "resolution": "PT15M"}
+```
+
+Tool: `get_lowest_period`.
+
+**Find a two-hour low-cost start window after 10:00 local time:**
+
+```json
+{
+  "duration_minutes": 120,
+  "day": "2026-10-23",
+  "resolution": "PT15M",
+  "earliest_start": "2026-10-23T10:00:00+02:00",
+  "latest_end": "2026-10-23T23:00:00+02:00"
+}
+```
+
+Tool: `get_best_start_time`.
+
+**Estimate a 2 kW appliance running for one hour:**
+
+```json
+{
+  "power_kw": 2.0,
+  "duration_minutes": 60,
+  "start_time": "2026-10-23T12:00:00+02:00",
+  "resolution": "PT15M"
+}
+```
+
+Tool: `calculate_energy_cost`. A full set of price intervals is required;
+an incomplete window produces `status: "incomplete"` and null costs.
+
+**Find periods strictly cheaper than 0.20 per kWh (electricity) or
+per m³ (gas):**
+
+```json
+{"threshold": 0.2, "below": true, "minimum_duration_minutes": 30}
+```
+
+Tool: `get_price_threshold_periods`. The same numeric threshold is applied
+independently to both energy types; units differ.
+
+**Find negative electricity-price periods:**
+
+```json
+{"minimum_duration_minutes": 30, "resolution": "PT15M"}
+```
+
+Tool: `get_negative_price_periods`. Zero does not qualify.
+
+**Select four hours as two independent two-hour blocks:**
+
+```json
+{"total_minutes": 240, "minimum_block_minutes": 120}
+```
+
+Tool: `get_best_split_periods`. Block selection is greedy, not a general
+globally optimal scheduling algorithm.
+
+**Estimate one battery charge/discharge cycle:**
+
+```json
+{
+  "capacity_kwh": 5.0,
+  "charge_power_kw": 2.5,
+  "discharge_power_kw": 2.5,
+  "round_trip_efficiency": 0.9
+}
+```
+
+Tool: `calculate_battery_savings`. The model is simplified and does not
+account for actual household consumption, degradation, or grid fees.
+
+**Compare two calendar days:**
+
+```json
+{"first_day": "2026-10-22", "second_day": "2026-10-23"}
+```
+
+Tool: `compare_days`. `mean_difference` is second day minus first day;
+missing prices are not imputed.
+
+**Inspect trend, volatility and descriptive statistics:** use
+`get_price_trend`, `get_price_volatility`, or `get_price_statistics`
+with `{"day": "2026-10-23", "resolution": "PT15M"}`. Trend also accepts
+`stable_tolerance` (absolute price units, default 0.005).
+
+## Additional daily price analytics
+
+The existing `get_price_threshold_periods`, `get_best_split_periods`
+and `calculate_battery_savings` remain available; they are not
+registered twice. Five further tools are available:
+
+| Tool | Behavior |
+| --- | --- |
+| `get_negative_price_periods` | Contiguous electricity intervals strictly below zero, with configurable minimum duration |
+| `get_price_trend` | First-to-last available price change classified as rising, falling or stable with an absolute tolerance |
+| `get_price_volatility` | Population standard deviation, range and changes between adjacent available intervals |
+| `compare_days` | Compares price distributions on two dates and returns the second-minus-first mean difference |
+| `get_price_statistics` | Mean, median, minimum, maximum, range, population standard deviation and interpolated 25th/75th percentiles |
+
+All operations use normalized public `total` values, with separate
+electricity and gas results except negative-price periods, which apply
+only to electricity. Empty data returns null statistics; trend results
+also report whether any gaps exist. Comparison statistics describe
+available intervals, not guaranteed complete-day coverage.
+
+## Linked-device tools from the upstream API
+
+The upstream `python-frank-energie` client exposes
+`smart_batteries()`, `smart_pv_systems()` and `enode_vehicles()`.
+Three read-only MCP tools wrap these methods and return only
+`{"count": N}`. No device IDs, addresses, charging settings, or
+other identifying metadata are returned.
+
+- `get_smart_battery_count`: linked smart battery count.
+- `get_smart_pv_system_count`: linked solar PV system count.
+- `get_electric_vehicle_count`: linked Enode electric vehicle count.
+
+All three require `FRANK_ENERGIE_USERNAME` and
+`FRANK_ENERGIE_PASSWORD` in the server environment. Some upstream
+services also require smart-trading or smart-charging enrollment.
+A count of zero does not establish that the account is eligible for
+a particular feature. API failures are returned as generic MCP errors.
+
+Other upstream capabilities inspected include invoices, meter readings,
+month insights, customer-specific prices, contract price resolution,
+battery sessions, solar summaries and charging controls. These are
+not exposed here because they require additional privacy, input and
+write-action policy design. The three new tools perform no mutations.
+
+## Additional account status tools
+
+`get_smart_feed_in_status()` calls upstream `user_smart_feed_in()`
+and returns only the boolean flags `is_activated`,
+`has_accepted_terms`, `is_app_onboarding_available` and
+`is_available_in_country`, plus `available`. If the upstream API
+returns no enrollment, `available` is false and flags are null.
+No user ID or account timestamps are returned.
+
+`get_contract_price_resolution_state(connection_id)` delegates to
+`contract_price_resolution_state(connection_id)` and returns only
+`available`, `active_option`, `available_options` and
+`is_change_request_possible`. The caller must provide a valid
+connection ID; the ID is not echoed in the response. This tool never
+calls the upstream contract change operation.
+
+Both tools require configured Frank Energie credentials. They are
+read-only and use the existing generic error boundary.
+
+## Invoice and solar-system summaries
+
+`get_invoice_statistics(year)` delegates to upstream
+`invoices(site_reference)` and aggregates only invoices whose start
+date falls within the requested `Europe/Amsterdam` calendar year.
+It returns `year`, `invoice_count`, `total_amount` and
+`average_amount` (null when no invoices qualify). It does not
+return invoice IDs, addresses or descriptions. The configured
+`FRANK_ENERGIE_SITE_REFERENCE` is required in addition to credentials.
+Totals are based on upstream invoice amounts and are not a reconstructed
+energy bill.
+
+`get_smart_pv_system_summary(device_id)` delegates to upstream
+`smart_pv_system_summary(device_id)` and returns only
+`available`, `operational_status`, `steering_status`,
+`total_bonus` and `total_result`. It requires credentials and a
+device ID but does not echo the identifier in the response.
+Neither tool performs mutations.
+
+## Smart battery status
+
+`get_smart_battery_status(device_id)` calls upstream
+`smart_battery_details(device_id)` and returns an allowlisted
+`available` flag, `state_of_charge_percent` (0–100),
+`status`, `last_update` (timezone-aware ISO timestamp), and
+`capacity_kwh` (nullable). It requires credentials and a
+nonempty linked device ID. The response never echoes device IDs,
+trading settings or account metadata. A missing upstream battery
+returns `{"available": false}`. This tool is read-only.
+
+## Smart HVAC status
+
+`get_smart_hvac_status()` calls the authenticated upstream
+`smart_hvac_status()` method. It returns only `available`,
+`is_activated`, and `is_available_in_country`. When no smart HVAC
+enrollment is returned, `available` is false and the flags are null.
+An existing enrollment can also contain nullable flags. User IDs and
+registration timestamps are never included. The tool is read-only and
+does not change HVAC settings.
+
+## Daily consumption statistics
+
+`get_daily_consumption_statistics(start_date, end_date)` calls the
+authenticated upstream `meter_readings(site_reference)` API.
+Both dates use ISO `YYYY-MM-DD` format, are inclusive, and must
+form an ordered range of no more than 366 days. The result contains
+`start_date`, `end_date`, `day_count`, `total_kwh` and
+`average_daily_kwh` (null when no readings are available).
+Only days with upstream readings contribute to the average; missing
+days are not treated as zero. Duplicate dates, negative/nonfinite
+values and malformed upstream records are rejected. No raw meter
+readings, user IDs or site references are returned. This tool
+requires credentials and `FRANK_ENERGIE_SITE_REFERENCE` and
+does not modify upstream data.
+
+## Battery trading-session statistics
+
+`get_smart_battery_session_statistics(device_id, start_date, end_date)`
+calls the authenticated upstream `smart_battery_sessions` API.
+The inclusive date range must be ordered and span at most 366 days.
+The response includes `available`, `session_count`,
+`result_count`, `total_session_result` and
+`average_session_result`. Session results with null amounts
+are excluded from the financial aggregates but included in
+`session_count`. When no numeric results are available, total
+and average are null. Device identifiers, trade indexes and
+individual sessions are excluded. These totals are sums of
+upstream session results, not an invoice or guaranteed savings.
+This tool is read-only and requires credentials.
+
+## Billing-period usage and costs
+
+`get_period_usage_and_costs(start_date)` delegates to upstream
+`period_usage_and_costs(site_reference, start_date)` with an ISO
+calendar date. It returns an `available` flag and a `categories`
+mapping with `electricity`, `gas`, and `feed_in`.
+Each available category contains `unit`, `usage_total`, and
+`costs_total` (numeric totals may be null). Missing categories
+remain null. Detailed usage items, upstream period identifiers
+and site references are excluded. This tool requires credentials
+and `FRANK_ENERGIE_SITE_REFERENCE`; it is read-only. The
+upstream billing-period totals are not reconstructed invoices.
+
+## EV charger statistics
+
+`get_ev_charger_statistics(start_date)` calls upstream
+`enode_chargers(site_reference, start_date)` with an ISO calendar
+date. It returns `charger_count`, `reachable_count`,
+`smart_capable_count`, and `smart_enabled_count`. Charger IDs,
+location details, interventions, and raw charge settings are
+excluded. This tool requires credentials and
+`FRANK_ENERGIE_SITE_REFERENCE`. It is read-only and does not
+change charging settings.
+
+## Monthly cost insights
+
+`get_monthly_cost_insights(month)` delegates to upstream
+`month_insights(site_reference, month)`. The month is a
+zero-padded `YYYY-MM` string. The tool returns `available`,
+`month`, and allowlisted upstream expected/actual cost totals,
+including gas, electricity, fixed costs and feed-in.
+Missing cost values are null. It excludes invoice IDs,
+account identifiers and meter-reading timestamps. The tool
+requires credentials and `FRANK_ENERGIE_SITE_REFERENCE`,
+and does not modify upstream data.
+
+## Account country
+
+`get_account_country()` delegates to upstream `user_country()`
+and returns only `country_code`, a validated uppercase
+two-letter country code such as `NL`. It requires Frank Energie
+credentials but not a delivery-site reference. It excludes user
+IDs, email addresses and other account metadata. This operation
+is read-only.
+
+## Smart battery fleet statistics
+
+`get_smart_battery_fleet_statistics()` calls upstream
+`smart_batteries()` and returns `battery_count`,
+`capacity_reported_count`, `total_capacity_kwh`,
+`total_max_charge_power`, and `total_max_discharge_power`.
+Missing capacity or power values are excluded from their totals;
+when no values are reported, the total is null rather than zero.
+Power totals retain the upstream units; they are not converted
+or assumed to be kW. Device IDs, brands and settings are omitted.
+The tool requires credentials and is read-only.
+
+## Electric vehicle statistics
+
+`get_electric_vehicle_statistics()` delegates to upstream
+`enode_vehicles()` and returns `vehicle_count`,
+`reachable_count`, `smart_capable_count` and
+`smart_enabled_count`. Vehicle identifiers, location and
+charging settings are excluded. The tool requires account
+credentials, but no delivery-site reference. It is read-only.
+
+## Smart PV fleet statistics
+
+`get_smart_pv_fleet_statistics()` delegates to upstream
+`smart_pv_systems()` and returns `system_count`,
+`panel_group_count`, `panel_count_reported_groups`,
+`total_panel_count`, `capacity_reported_groups` and
+`total_capacity_kwp`. Missing panel counts or capacity
+are excluded from totals; when no groups report a value,
+the corresponding total is null. System IDs, connection
+numbers, inverter serial numbers and panel group IDs are
+excluded. The tool requires credentials and is read-only.
+
+## Current month cost summary
+
+`get_current_month_cost_summary()` delegates to upstream
+`month_summary(site_reference)` and returns `available`,
+expected and actual cost totals, expected costs per day,
+meter-reading completeness and the gas-exclusion flag.
+An absent summary returns `available=false`. Customer IDs,
+meter-reading dates and raw model data are excluded. Credentials
+and `FRANK_ENERGIE_SITE_REFERENCE` are required. Availability
+depends on the upstream API and may be affected by API schema
+changes. This operation is read-only.
+
 ## Authentication
 
 Account and delivery-site tools use the existing upstream `python-frank-energie` login method. Configure the server process with `FRANK_ENERGIE_USERNAME` and `FRANK_ENERGIE_PASSWORD`; set `FRANK_ENERGIE_SITE_REFERENCE` for `get_account`. Both credentials must be provided together. Missing credentials or site references cause descriptive errors before an account request is sent. Avoid putting credentials in repository files, command-line arguments, logs or screenshots. The server currently logs in for each managed upstream session and closes the client after each request. Token persistence, renewal across requests and credential rotation have not been validated.
@@ -178,3 +552,34 @@ See [ARCHITECTURE.md](ARCHITECTURE.md), [MCP_SPEC.md](MCP_SPEC.md), [AI_POLICY.m
 **External ChatGPT access:** Not production-ready yet. The built-in Streamable HTTP listener is **loopback-only and unauthenticated**. Do not expose it publicly or treat a TLS tunnel alone as sufficient authentication. A production deployment needs an HTTPS ingress with validated client authentication and authorization, restricted access to the upstream loopback service, rate limiting, request/body size limits, TLS certificate management, and documented token rotation. Verify that the intended ChatGPT MCP connector supports the chosen authentication flow before deployment. A reverse proxy or tunnel must not forward unauthenticated public requests to `/mcp`.
 
 **Release blockers:** Verify all CI checks on the exact release commit; review legacy unused models and modules; validate real MCP tool calls over both transports; test upstream timeouts, authentication failures, missing data, and time-zone boundaries; and document a rollback procedure. Do not describe the service as production-ready until these checks pass.
+
+## Smart battery trading result
+
+`get_smart_battery_trading_result(device_id)` reads the upstream
+`smart_battery_details()` summary and returns only `available` and
+`total_result`. The value is the upstream cumulative trading result,
+not a newly calculated profit or a guaranteed billing amount. Credentials
+are required; device identifiers and account details are not returned.
+
+## Smart PV financial result
+
+`get_smart_pv_financial_result(device_id)` delegates to upstream
+`smart_pv_system_summary()` and returns only `available`, `total_bonus`
+and `total_result`. Missing numeric values remain `null`. It does not
+return device or account identifiers, and does not compute financial
+results independently. Credentials are required.
+
+## Monthly actual versus expected usage
+
+`get_monthly_usage_differences(month)` accepts a `YYYY-MM` month and
+returns the upstream electricity, gas and feed-in usage difference blocks,
+including actual and expected usage, average unit prices and costs. It
+requires account credentials and `FRANK_ENERGIE_SITE_REFERENCE`. No
+invoice, account or delivery-site identifiers are returned.
+
+## Smart PV operational status
+
+`get_smart_pv_operational_status(device_id)` returns the upstream
+operational status, steering status and optional timestamp for a linked
+PV system. Credentials are required. Device IDs and account metadata are
+not returned; this read-only tool does not change steering settings.

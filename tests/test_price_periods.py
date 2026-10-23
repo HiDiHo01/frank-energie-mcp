@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
 from types import SimpleNamespace
+from typing import Literal
 from unittest.mock import AsyncMock
 
 import pytest
@@ -36,15 +37,15 @@ def _service(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("resolution,step", [("PT15M", 15), ("PT60M", 60)])
-async def test_cheapest_and_most_expensive_four_hours(resolution: str, step: int) -> None:
+async def test_cheapest_and_most_expensive_four_hours(
+    resolution: Literal["PT15M", "PT60M"], step: int
+) -> None:
     """Choose a four-hour consecutive window by mean price, not a single interval."""
     day = date(2026, 6, 15)
     start = datetime(2026, 6, 14, 22, tzinfo=UTC)
     per_hour = 60 // step
     entries = [
-        _record(
-            start + timedelta(minutes=i * step), step, 0.1 if i < 4 * per_hour else 0.5
-        )
+        _record(start + timedelta(minutes=i * step), step, 0.1 if i < 4 * per_hour else 0.5)
         for i in range(8 * per_hour)
     ]
     service, client = _service(entries)
@@ -53,10 +54,10 @@ async def test_cheapest_and_most_expensive_four_hours(resolution: str, step: int
     assert low["electricity"]["period"]["average_total"] == pytest.approx(0.1)
     assert high["electricity"]["period"]["average_total"] == pytest.approx(0.5)
     assert low["electricity"]["period"]["interval_count"] == 240 // step
-    assert low["electricity"]["period"]["start"] == entries[0].date_from.isoformat()
+    assert datetime.fromisoformat(low["electricity"]["period"]["start"]) == entries[0].date_from
     assert (
-        high["electricity"]["period"]["start"]
-        == entries[4 * per_hour].date_from.isoformat()
+        datetime.fromisoformat(high["electricity"]["period"]["start"])
+        == entries[4 * per_hour].date_from
     )
     assert low["gas"]["period"] is None
     assert client.prices.await_count == 2
