@@ -68,9 +68,7 @@ async def test_consumption_rejects_invalid_ranges_and_duplicate_dates() -> None:
     client = AsyncMock()
     service = make_service(client)
     with pytest.raises(ValueError, match="date range"):
-        await service.get_daily_consumption_statistics(
-            date(2026, 10, 2), date(2026, 10, 1)
-        )
+        await service.get_daily_consumption_statistics(date(2026, 10, 2), date(2026, 10, 1))
     client.meter_readings.return_value = SimpleNamespace(
         daily_consumption=[
             SimpleNamespace(date="2026-10-01", consumption_kwh=1.0),
