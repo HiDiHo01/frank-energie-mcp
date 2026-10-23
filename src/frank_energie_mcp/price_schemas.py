@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from json import dumps
 from math import isfinite
 from typing import Any
 
@@ -61,4 +62,4 @@ def normalize_market_prices(prices: Any) -> dict[str, Any]:
         if not isinstance(entries, list) or len(entries) > 200:
             raise ValueError("Invalid market-price series.")
         result[energy] = [normalize_interval(entry) for entry in entries]
-    return MarketPriceResponse.model_validate(result).model_dump(mode="json")
+    return MarketPriceResponse.model_validate_json(dumps(result)).model_dump(mode="json")
