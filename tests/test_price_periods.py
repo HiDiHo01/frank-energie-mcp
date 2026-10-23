@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
 from types import SimpleNamespace
+from typing import Literal
 from unittest.mock import AsyncMock
 
 import pytest
@@ -36,7 +37,9 @@ def _service(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("resolution,step", [("PT15M", 15), ("PT60M", 60)])
-async def test_cheapest_and_most_expensive_four_hours(resolution: str, step: int) -> None:
+async def test_cheapest_and_most_expensive_four_hours(
+    resolution: Literal["PT15M", "PT60M"], step: int
+) -> None:
     """Choose a four-hour consecutive window by mean price, not a single interval."""
     day = date(2026, 6, 15)
     start = datetime(2026, 6, 14, 22, tzinfo=UTC)
