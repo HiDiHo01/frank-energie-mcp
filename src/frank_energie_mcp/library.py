@@ -145,7 +145,7 @@ def default_library_bridge() -> FrankEnergieLibraryBridge:
     """
 
     def _factory() -> _AsyncFrankEnergie:
-        from python_frank_energie.frank_energie import FrankEnergie
+        from python_frank_energie.frank_energie import FrankEnergie  # type: ignore[import-untyped]
 
         return cast(_AsyncFrankEnergie, FrankEnergie())
 
