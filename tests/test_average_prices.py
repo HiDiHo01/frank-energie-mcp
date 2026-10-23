@@ -115,12 +115,8 @@ async def test_mcp_tool_delegates_date_and_resolution() -> None:
         "gas": {},
     }
     server = create_server(service)
-    await server.call_tool(
-        "get_average_prices", {"day": "2026-06-15", "resolution": "PT60M"}
-    )
-    service.get_average_prices.assert_awaited_once_with(
-        day=date(2026, 6, 15), resolution="PT60M"
-    )
+    await server.call_tool("get_average_prices", {"day": "2026-06-15", "resolution": "PT60M"})
+    service.get_average_prices.assert_awaited_once_with(day=date(2026, 6, 15), resolution="PT60M")
 
 
 @pytest.mark.asyncio
