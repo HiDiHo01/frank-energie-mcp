@@ -151,7 +151,6 @@ def default_library_bridge() -> FrankEnergieLibraryBridge:
     )
 
 
-
 def default_service() -> FrankEnergieService:
     """Return the default high-level service helper."""
     return FrankEnergieService(bridge=default_library_bridge())
