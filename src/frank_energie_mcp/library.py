@@ -45,9 +45,7 @@ class _AsyncFrankEnergie(Protocol):
     async def enode_chargers(self, site_reference: str, start_date: date) -> Any:
         """Return upstream charging devices for a site and date."""
 
-    async def period_usage_and_costs(
-        self, site_reference: str, start_date: str
-    ) -> Any:
+    async def period_usage_and_costs(self, site_reference: str, start_date: str) -> Any:
         """Return upstream period usage and cost categories."""
 
     async def meter_readings(self, site_reference: str) -> Any:
@@ -95,9 +93,7 @@ class _AsyncFrankEnergie(Protocol):
     async def contract_price_resolution_state(self, connection_id: str | None = None) -> Any:
         """Return the current contract price resolution state."""
 
-    async def smart_battery_sessions(
-        self, device_id: str, start_date: date, end_date: date
-    ) -> Any:
+    async def smart_battery_sessions(self, device_id: str, start_date: date, end_date: date) -> Any:
         """Return upstream trading sessions for a linked smart battery."""
 
     async def smart_battery_details(self, device_id: str) -> Any:
@@ -258,9 +254,7 @@ class FrankEnergieService:
             "period_minutes": period_minutes,
             "electricity": _extreme_period(
                 normalized["electricity"], requested_day, period_minutes, step, highest
-            ),
-            "gas": _extreme_period(
-                normalized["gas"], requested_day, period_minutes, step, highest
+            "gas": _extreme_period(normalized["gas"], requested_day, period_minutes, step, highest),
             ),
         }
 
@@ -412,7 +406,9 @@ class FrankEnergieService:
             "resolution": resolution,
             "electricity": threshold_periods(
                 validated_series(prices["electricity"], requested_day, resolution),
-                0.0, True, minimum_duration_minutes,
+                0.0,
+                True,
+                minimum_duration_minutes,
             ),
         }
 
@@ -482,9 +478,7 @@ class FrankEnergieService:
         first_date, first_prices = await self._optimization_data(first_day, resolution)
         second_date, second_prices = await self._optimization_data(second_day, resolution)
         first = {
-            energy: price_statistics(
-                validated_series(first_prices[energy], first_date, resolution)
-            )
+            energy: price_statistics(validated_series(first_prices[energy], first_date, resolution))
             for energy in ("electricity", "gas")
         }
         second = {
@@ -500,8 +494,8 @@ class FrankEnergieService:
             "mean_difference": {
                 energy: (
                     second[energy]["mean"] - first[energy]["mean"]
-                    if first[energy]["mean"] is not None
-                    and second[energy]["mean"] is not None else None
+                    if first[energy]["mean"] is not None and second[energy]["mean"] is not None
+                    else None
                 )
                 for energy in ("electricity", "gas")
             },
@@ -572,9 +566,7 @@ class FrankEnergieService:
         return {
             "battery_count": len(batteries),
             "capacity_reported_count": counts["capacity"],
-            "total_capacity_kwh": (
-                totals["capacity"] if counts["capacity"] else None
-            ),
+            "total_capacity_kwh": (totals["capacity"] if counts["capacity"] else None),
             "total_max_charge_power": (
                 totals["max_charge_power"] if counts["max_charge_power"] else None
             ),
@@ -730,9 +722,7 @@ class FrankEnergieService:
             raise ValueError("Unexpected smart feed-in response structure.")
         return {"available": True, **flags}
 
-    async def get_contract_price_resolution_state(
-        self, connection_id: str
-    ) -> dict[str, Any]:
+    async def get_contract_price_resolution_state(self, connection_id: str) -> dict[str, Any]:
         """Read contract resolution options without changing the contract."""
         self._require_credentials()
         if not isinstance(connection_id, str) or not connection_id.strip():
@@ -745,7 +735,8 @@ class FrankEnergieService:
         options = getattr(state, "available_options", None)
         can_change = getattr(state, "is_change_request_possible", None)
         if (
-            active is not None and not isinstance(active, str)
+            active is not None
+            and not isinstance(active, str)
             or not isinstance(options, list)
             or not all(isinstance(option, str) for option in options)
             or type(can_change) is not bool
@@ -876,9 +867,7 @@ class FrankEnergieService:
             result[field] = float(value) if value is not None else None
         return result
 
-    async def get_period_usage_and_costs(
-        self, start_date: date
-    ) -> dict[str, Any]:
+    async def get_period_usage_and_costs(self, start_date: date) -> dict[str, Any]:
         """Return non-identifying usage and costs for an upstream billing period."""
         self._require_credentials()
         if not self.bridge.site_reference:
@@ -1148,9 +1137,7 @@ def _average_series(intervals: list[dict[str, Any]], day: date) -> dict[str, Any
     start = datetime(day.year, day.month, day.day, tzinfo=local_zone).astimezone(UTC)
     next_day = day + timedelta(days=1)
     end = datetime(next_day.year, next_day.month, next_day.day, tzinfo=local_zone).astimezone(UTC)
-    ordered = sorted(
-        intervals, key=lambda interval: datetime.fromisoformat(interval["date_from"])
-    )
+    ordered = sorted(intervals, key=lambda interval: datetime.fromisoformat(interval["date_from"]))
     observed_seconds = 0.0
     previous_end: datetime | None = None
     for interval in ordered:
@@ -1179,7 +1166,9 @@ def _average_series(intervals: list[dict[str, Any]], day: date) -> dict[str, Any
         "status": (
             "empty"
             if not ordered
-            else "complete" if observed_seconds == day_seconds else "incomplete"
+            else "complete"
+            if observed_seconds == day_seconds
+            else "incomplete"
         ),
     }
 
@@ -1199,9 +1188,7 @@ def _extreme_period(
     step_seconds = step_minutes * 60
     for index in range(len(ordered) - window_size + 1):
         window = ordered[index : index + window_size]
-        starts = [
-            datetime.fromisoformat(entry["date_from"]).astimezone(UTC) for entry in window
-        ]
+        starts = [datetime.fromisoformat(entry["date_from"]).astimezone(UTC) for entry in window]
         ends = [datetime.fromisoformat(entry["date_till"]).astimezone(UTC) for entry in window]
         if any(
             (end - start).total_seconds() != step_seconds
