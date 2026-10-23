@@ -219,6 +219,61 @@ def create_server(
         )
 
     @server.tool()
+    async def get_negative_price_periods(
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+        minimum_duration_minutes: int = 15,
+    ) -> object:
+        """Find consecutive negative electricity-price periods."""
+        return await safe_tool_call(
+            lambda: energy_service.get_negative_price_periods(
+                day, resolution, minimum_duration_minutes
+            )
+        )
+
+    @server.tool()
+    async def get_price_trend(
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+        stable_tolerance: float = 0.005,
+    ) -> object:
+        """Classify first-to-last daily price movement."""
+        return await safe_tool_call(
+            lambda: energy_service.get_price_trend(day, resolution, stable_tolerance)
+        )
+
+    @server.tool()
+    async def get_price_volatility(
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Return daily spread and consecutive price changes."""
+        return await safe_tool_call(
+            lambda: energy_service.get_price_volatility(day, resolution)
+        )
+
+    @server.tool()
+    async def get_price_statistics(
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Return daily price percentiles and descriptive statistics."""
+        return await safe_tool_call(
+            lambda: energy_service.get_price_statistics(day, resolution)
+        )
+
+    @server.tool()
+    async def compare_days(
+        first_day: date,
+        second_day: date,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Compare total price distributions for two Amsterdam calendar days."""
+        return await safe_tool_call(
+            lambda: energy_service.compare_days(first_day, second_day, resolution)
+        )
+
+    @server.tool()
     async def get_gas_price(resolution: PriceResolution = "PT15M") -> object:
         """Get today's pricing data including gas prices."""
         return await safe_tool_call(lambda: energy_service.get_gas_price(resolution=resolution))
