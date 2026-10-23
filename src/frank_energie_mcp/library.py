@@ -39,6 +39,9 @@ class _AsyncFrankEnergie(Protocol):
     async def UserSites(self) -> Any:  # noqa: N802 - upstream API method name
         """Return authenticated delivery sites."""
 
+    async def enode_chargers(self, site_reference: str, start_date: date) -> Any:
+        """Return upstream charging devices for a site and date."""
+
     async def period_usage_and_costs(
         self, site_reference: str, start_date: str
     ) -> Any:
@@ -616,6 +619,38 @@ class FrankEnergieService:
             "active_option": active,
             "available_options": options,
             "is_change_request_possible": can_change,
+        }
+
+    async def get_ev_charger_statistics(self, start_date: date) -> dict[str, int]:
+        """Count linked EV chargers and supported features without identifiers."""
+        self._require_credentials()
+        if not self.bridge.site_reference:
+            raise RuntimeError("Charger access requires FRANK_ENERGIE_SITE_REFERENCE.")
+        if not isinstance(start_date, date) or isinstance(start_date, datetime):
+            raise ValueError("start_date must be a calendar date.")
+        async with self.bridge.session() as client:
+            data = await client.enode_chargers(self.bridge.site_reference, start_date)
+        chargers = getattr(data, "chargers", None)
+        if not isinstance(chargers, list):
+            raise ValueError("Unexpected EV charger response structure.")
+        reachable_count = 0
+        smart_capable_count = 0
+        smart_enabled_count = 0
+        for charger in chargers:
+            reachable = getattr(charger, "is_reachable", None)
+            capable = getattr(charger, "can_smart_charge", None)
+            settings = getattr(charger, "charge_settings", None)
+            enabled = getattr(settings, "is_smart_charging_enabled", None)
+            if any(type(value) is not bool for value in (reachable, capable, enabled)):
+                raise ValueError("Unexpected EV charger capability flags.")
+            reachable_count += int(reachable)
+            smart_capable_count += int(capable)
+            smart_enabled_count += int(enabled)
+        return {
+            "charger_count": len(chargers),
+            "reachable_count": reachable_count,
+            "smart_capable_count": smart_capable_count,
+            "smart_enabled_count": smart_enabled_count,
         }
 
     async def get_period_usage_and_costs(
