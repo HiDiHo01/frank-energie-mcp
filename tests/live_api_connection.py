@@ -18,7 +18,11 @@ from python_frank_energie import FrankEnergie
 
 async def run() -> None:
     """Verify the public MarketPrices API can be reached and parsed."""
-    for name in ("FRANK_ENERGIE_USERNAME", "FRANK_ENERGIE_PASSWORD", "FRANK_ENERGIE_SITE_REFERENCE"):
+    for name in (
+        "FRANK_ENERGIE_USERNAME",
+        "FRANK_ENERGIE_PASSWORD",
+        "FRANK_ENERGIE_SITE_REFERENCE",
+    ):
         if os.environ.get(name):
             raise RuntimeError("Connectivity test must run without account credentials.")
 
