@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Twenty-eight read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Twenty-nine read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -42,6 +42,7 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_contract_price_resolution_state` | `get_contract_price_resolution_state(connection_id)` | Authenticated, allowlisted contract resolution options |
 | `get_invoice_statistics` | `get_invoice_statistics(year)` | Authenticated annual invoice count, total and average |
 | `get_smart_pv_system_summary` | `get_smart_pv_system_summary(device_id)` | Authenticated, allowlisted PV status and totals |
+| `get_smart_battery_status` | `get_smart_battery_status(device_id)` | Authenticated battery charge, status, update timestamp and capacity |
 | `get_account` | `get_account()` | After a successful authenticated account request, returns only `{"authenticated": true}`; account details are deliberately not exposed |
 | `list_sites` | `list_sites()` | `{"count": N}` for a recognized site collection; site identifiers and addresses are not exposed |
 
@@ -259,6 +260,17 @@ a nonempty device ID. It returns only `available`,
 `operational_status`, `steering_status`, `total_bonus` and
 `total_result`. Missing upstream summaries return
 `{"available": false}`. Neither method writes upstream state.
+
+## Smart battery status contract
+
+`get_smart_battery_status(device_id)` requires credentials and a
+nonempty device ID. It returns `available`,
+`state_of_charge_percent`, `status`, `last_update`, and
+`capacity_kwh`. Charge is validated as an integer in 0–100,
+capacity is nonnegative and finite when provided, and timestamps
+must be timezone-aware. A null upstream detail result returns
+`{"available": false}`. The response excludes device identifiers
+and configuration, and never invokes upstream write operations.
 
 ## Authentication and upstream access
 
