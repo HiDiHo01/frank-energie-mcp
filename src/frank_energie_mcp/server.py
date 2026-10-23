@@ -318,6 +318,11 @@ def create_server(
         )
 
     @server.tool()
+    async def get_account_country() -> object:
+        """Read the account country code without disclosing personal information."""
+        return await safe_tool_call(energy_service.get_account_country)
+
+    @server.tool()
     async def get_monthly_cost_insights(month: str) -> object:
         """Get upstream monthly expected and actual costs without customer metadata."""
         return await safe_tool_call(
