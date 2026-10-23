@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Twenty-one read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Twenty-four read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -35,6 +35,9 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `calculate_battery_savings` | `calculate_battery_savings(capacity_kwh, charge_power_kw, discharge_power_kw, round_trip_efficiency, day, resolution)` | Electricity one-cycle estimate and assumptions |
 | `get_price_statistics` | `get_price_statistics(day, resolution)` | Per-energy descriptive statistics |
 | `get_gas_price` | `get_gas_price(resolution)` | Normalized active gas interval or `null` |
+| `get_smart_battery_count` | `get_smart_battery_count()` | Authenticated `{"count": N}` from upstream `smart_batteries()` |
+| `get_smart_pv_system_count` | `get_smart_pv_system_count()` | Authenticated `{"count": N}` from upstream `smart_pv_systems()` |
+| `get_electric_vehicle_count` | `get_electric_vehicle_count()` | Authenticated `{"count": N}` from upstream `enode_vehicles()` |
 | `get_account` | `get_account()` | After a successful authenticated account request, returns only `{"authenticated": true}`; account details are deliberately not exposed |
 | `list_sites` | `list_sites()` | `{"count": N}` for a recognized site collection; site identifiers and addresses are not exposed |
 
@@ -213,6 +216,16 @@ For all daily analytics, electricity and gas prices have different physical
 units; their numeric results should not be combined. The normalized `total`
 comes from upstream data. The server does not independently derive taxes,
 markups or supplier-specific billing terms.
+
+## Authenticated device-count contracts
+
+The three device-count tools have no arguments. They require server-side
+Frank Energie credentials and return only a nonnegative integer count
+in `{"count": N}`. They call the upstream `smart_batteries()`,
+`smart_pv_systems()` and `enode_vehicles()` methods, respectively.
+A `None` upstream result is represented as zero; unexpected collection
+shapes raise an error. Raw device objects, IDs and account metadata
+are never serialized into MCP responses. These operations are read-only.
 
 ## Authentication and upstream access
 
