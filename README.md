@@ -78,6 +78,7 @@ The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol e
 | Tool | `get_contract_price_resolution_state` | Read active and available contract resolution options using a connection ID; does not change settings. |
 | Tool | `get_invoice_statistics` | Aggregates invoice totals for a calendar year; requires credentials and site reference. |
 | Tool | `get_smart_pv_system_summary` | Reads allowlisted operational/steering status and PV totals; requires credentials and device ID. |
+| Tool | `get_smart_battery_status` | Read a linked battery's state of charge, status, update time and capacity. |
 | Tool | `get_account` | Requires credentials and a site reference; returns only `{"authenticated": true}` after a successful account request |
 | Tool | `list_sites` | Requires credentials; returns only the number of recognized delivery sites |
 | Resource | `frank-energie://capabilities` | Static description of capabilities |
@@ -350,6 +351,17 @@ energy bill.
 `total_bonus` and `total_result`. It requires credentials and a
 device ID but does not echo the identifier in the response.
 Neither tool performs mutations.
+
+## Smart battery status
+
+`get_smart_battery_status(device_id)` calls upstream
+`smart_battery_details(device_id)` and returns an allowlisted
+`available` flag, `state_of_charge_percent` (0–100),
+`status`, `last_update` (timezone-aware ISO timestamp), and
+`capacity_kwh` (nullable). It requires credentials and a
+nonempty linked device ID. The response never echoes device IDs,
+trading settings or account metadata. A missing upstream battery
+returns `{"available": false}`. This tool is read-only.
 
 ## Authentication
 
