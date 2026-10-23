@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from unittest.mock import patch
 from contextlib import suppress
 from unittest.mock import AsyncMock
 
@@ -159,3 +160,34 @@ async def test_mcp_price_resolution_parameter() -> None:
     service.get_current_prices.assert_awaited_once_with(resolution="PT60M")
     with pytest.raises(Exception):
         await server.call_tool("get_current_prices", {"resolution": "PT30M"})
+
+
+def test_main_starts_local_http_transport(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Configure Streamable HTTP on loopback without starting a network server."""
+    from frank_energie_mcp.server import main
+
+    monkeypatch.setenv("FRANK_ENERGIE_MCP_TRANSPORT", "streamable-http")
+    monkeypatch.setenv("FRANK_ENERGIE_MCP_PORT", "8765")
+    with patch("frank_energie_mcp.server.create_server") as factory:
+        main()
+    factory.assert_called_once_with(host="127.0.0.1", port=8765)
+    factory.return_value.run.assert_called_once_with(transport="streamable-http")
+
+
+@pytest.mark.parametrize(
+    "host,port",
+    [("0.0.0.0", "8000"), ("127.0.0.1", "0"), ("127.0.0.1", "65536"), ("127.0.0.1", "abc")],
+)
+def test_http_transport_rejects_unsafe_configuration(
+    monkeypatch: pytest.MonkeyPatch, host: str, port: str
+) -> None:
+    """Reject non-loopback binding and invalid ports before server creation."""
+    from frank_energie_mcp.server import main
+
+    monkeypatch.setenv("FRANK_ENERGIE_MCP_TRANSPORT", "streamable-http")
+    monkeypatch.setenv("FRANK_ENERGIE_MCP_HOST", host)
+    monkeypatch.setenv("FRANK_ENERGIE_MCP_PORT", port)
+    with patch("frank_energie_mcp.server.create_server") as factory:
+        with pytest.raises(ValueError):
+            main()
+    factory.assert_not_called()
