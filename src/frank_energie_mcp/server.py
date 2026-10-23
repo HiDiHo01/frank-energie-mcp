@@ -306,6 +306,18 @@ def create_server(
         )
 
     @server.tool()
+    async def get_invoice_statistics(year: int) -> object:
+        """Aggregate invoice totals for a year without invoice identifiers."""
+        return await safe_tool_call(lambda: energy_service.get_invoice_statistics(year))
+
+    @server.tool()
+    async def get_smart_pv_system_summary(device_id: str) -> object:
+        """Read allowlisted PV system status and totals without identifiers."""
+        return await safe_tool_call(
+            lambda: energy_service.get_smart_pv_system_summary(device_id)
+        )
+
+    @server.tool()
     async def get_account() -> object:
         """Get the authenticated account information."""
         await safe_tool_call(energy_service.get_account)
