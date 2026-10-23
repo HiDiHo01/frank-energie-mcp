@@ -279,6 +279,11 @@ def create_server(
         return await safe_tool_call(lambda: energy_service.get_gas_price(resolution=resolution))
 
     @server.tool()
+    async def get_smart_battery_fleet_statistics() -> object:
+        """Summarize linked battery fleet capacity and rated power."""
+        return await safe_tool_call(energy_service.get_smart_battery_fleet_statistics)
+
+    @server.tool()
     async def get_smart_battery_count() -> object:
         """Count linked smart batteries without returning device identifiers."""
         return await safe_tool_call(energy_service.get_smart_battery_count)
