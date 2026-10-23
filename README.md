@@ -576,3 +576,10 @@ returns the upstream electricity, gas and feed-in usage difference blocks,
 including actual and expected usage, average unit prices and costs. It
 requires account credentials and `FRANK_ENERGIE_SITE_REFERENCE`. No
 invoice, account or delivery-site identifiers are returned.
+
+## Smart PV operational status
+
+`get_smart_pv_operational_status(device_id)` returns the upstream
+operational status, steering status and optional timestamp for a linked
+PV system. Credentials are required. Device IDs and account metadata are
+not returned; this read-only tool does not change steering settings.
