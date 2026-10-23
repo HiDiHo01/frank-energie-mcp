@@ -88,6 +88,7 @@ The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol e
 | Tool | `get_account_country` | Read the authenticated account's two-letter country code. |
 | Tool | `get_smart_battery_fleet_statistics` | Aggregate linked battery capacity and rated charge/discharge power. |
 | Tool | `get_electric_vehicle_statistics` | Count linked vehicles, reachability and smart charging capability. |
+| Tool | `get_smart_pv_fleet_statistics` | Aggregate solar panel groups, declared panel counts and PV capacity. |
 | Tool | `get_account` | Requires credentials and a site reference; returns only `{"authenticated": true}` after a successful account request |
 | Tool | `list_sites` | Requires credentials; returns only the number of recognized delivery sites |
 | Resource | `frank-energie://capabilities` | Static description of capabilities |
@@ -477,6 +478,18 @@ The tool requires credentials and is read-only.
 `smart_enabled_count`. Vehicle identifiers, location and
 charging settings are excluded. The tool requires account
 credentials, but no delivery-site reference. It is read-only.
+
+## Smart PV fleet statistics
+
+`get_smart_pv_fleet_statistics()` delegates to upstream
+`smart_pv_systems()` and returns `system_count`,
+`panel_group_count`, `panel_count_reported_groups`,
+`total_panel_count`, `capacity_reported_groups` and
+`total_capacity_kwp`. Missing panel counts or capacity
+are excluded from totals; when no groups report a value,
+the corresponding total is null. System IDs, connection
+numbers, inverter serial numbers and panel group IDs are
+excluded. The tool requires credentials and is read-only.
 
 ## Authentication
 
