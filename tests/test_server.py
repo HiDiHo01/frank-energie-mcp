@@ -93,8 +93,10 @@ async def test_upstream_error_does_not_leak_into_logs(
     )
     server = create_server(service)
 
-    with caplog.at_level(logging.WARNING, logger="frank_energie_mcp.server"):
-        with suppress(Exception):
+    with (
+        caplog.at_level(logging.WARNING, logger="frank_energie_mcp.server"),
+        suppress(Exception),
+    ):
             await server.call_tool("get_account", {})
 
     output = caplog.text
