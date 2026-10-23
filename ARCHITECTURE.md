@@ -36,7 +36,7 @@ FastMCP handlers -> minimal AccountResponse / SitesResponse
 | Module | Responsibility |
 | --- | --- |
 | `__main__.py` | Invokes `server.main()` |
-| `server.py` | FastMCP creation, eleven tool registrations, resource, prompt, safe tool error handling, transport configuration, and minimal account/site responses |
+| `server.py` | FastMCP creation, sixteen tool registrations, resource, prompt, safe tool error handling, transport configuration, and minimal account/site responses |
 | `library.py` | `FrankEnergieService`, typed upstream protocol, managed `FrankEnergieLibraryBridge`, environment configuration, and active-interval selection |
 | `price_schemas.py` | Strict Pydantic price models, explicit field whitelisting, timestamp/amount validation, JSON normalization, and array bounds |
 | `tools/__init__.py` | Legacy package retained for import compatibility; tool implementations now live in `server.py` |
@@ -48,7 +48,7 @@ Separate `auth.py`, `config.py`, `resources/`, and `prompts/` implementations ar
 
 ### MCP layer
 
-- Expose eleven asynchronous read-only tools, one static resource, and one static prompt.
+- Expose sixteen asynchronous read-only tools, one static resource, and one static prompt.
 - Validate `resolution` as `PT15M` or `PT60M` at the tool boundary.
 - Use `Europe/Amsterdam` dates for today/tomorrow and optional-date statistical price requests.
 - Select upstream `current_hour` records for current electricity/gas prices.
@@ -105,6 +105,20 @@ logic is duplicated. Missing intervals invalidate affected windows,
 while other complete windows remain eligible. The algorithm returns
 `null` when no complete window exists, and prefers the earliest window
 for tied averages.
+
+## Price optimization
+
+`optimization.py` is a pure, reusable calculation layer over
+privacy-filtered `PriceInterval` records. It validates timestamp
+containment, expected 15-/60-minute interval lengths, overlaps,
+continuity, and parameter ranges before selecting windows. The service
+is responsible for upstream fetching and normalization; FastMCP
+handlers delegate to the service and preserve the existing generic
+error boundary. Electricity cost estimation integrates constant power
+over complete windows. Thresholds group adjacent qualifying bins;
+split blocks are selected greedily without overlap. The battery
+model estimates one charge-before-discharge cycle and does not claim
+to be a comprehensive operational optimization.
 
 ## Authentication and privacy
 
