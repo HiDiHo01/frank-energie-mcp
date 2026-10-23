@@ -35,7 +35,6 @@ Install Python 3.14 or newer, then open PowerShell:
 ```powershell
 git clone https://github.com/HiDiHo01/frank-energie-mcp.git
 cd frank-energie-mcp
-git switch fix/fastmcp-bootstrap-and-ci
 py -3.14 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e ".[dev]"
@@ -56,15 +55,50 @@ The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol e
 | Tool | `get_current_prices` | Returns current electricity and gas intervals via upstream `current_hour` |
 | Tool | `get_today_prices` | Fetches today's market prices |
 | Tool | `get_tomorrow_prices` | Fetches tomorrow's market prices |
-| Tool | `get_average_prices` | Averages available normalized `total` prices for electricity and gas for an optional Amsterdam calendar date and `PT15M`/`PT60M` resolution; reports interval count, first/last timestamps, coverage seconds, and completion status. |\n| Tool | `get_lowest_price` | Lowest available normalized total interval per energy type, with coverage status. |
+| Tool | `get_average_prices` | Averages available normalized `total` prices for electricity and gas for an optional Amsterdam calendar date and `PT15M`/`PT60M` resolution; reports interval count, first/last timestamps, coverage seconds, and completion status. |
+| Tool | `get_lowest_price` | Lowest available normalized total interval per energy type, with coverage status. |
 | Tool | `get_highest_price` | Highest available normalized total interval per energy type, with coverage status. |
 | Tool | `get_gas_price` | Returns the current gas interval or `null` when unavailable |
-| Tool | `get_account` | Not operational; authentication and site reference are missing |
-| Tool | `list_sites` | Delegates to upstream `UserSites()`; authentication required |
+| Tool | `get_account` | Requires credentials and a site reference; returns only `{"authenticated": true}` after a successful account request |
+| Tool | `list_sites` | Requires credentials; returns only the number of recognized delivery sites |
 | Resource | `frank-energie://capabilities` | Static description of capabilities |
 | Prompt | `summarize_energy_prices` | Static instructions for comparing prices |
 
 Price requests use the `Europe/Amsterdam` calendar date. Price tools use the bounded, privacy-safe JSON schema documented in MCP_SPEC.md.
+
+## Daily price statistics
+
+Three tools accept an optional `day` (ISO date, for example `2026-10-25`) and
+`resolution` (`PT15M` by default, or `PT60M`):
+
+- `get_average_prices`: arithmetic mean of available normalized `total` values
+  independently for electricity and gas. It is not duration-weighted.
+- `get_lowest_price`: lowest `total` interval for each energy type.
+- `get_highest_price`: highest `total` interval for each energy type.
+
+When `day` is omitted, the tools use the current calendar day in
+`Europe/Amsterdam`. They request public prices from `python-frank-energie`;
+the MCP layer does not calculate taxes or markups.
+
+Example MCP tool arguments:
+
+```json
+{"day": "2026-10-25", "resolution": "PT15M"}
+```
+
+Each result contains `date`, `resolution`, `electricity` and `gas`.
+Average results contain `average_total`, `interval_count`, `first_interval`,
+`last_interval`, `coverage_seconds`, `expected_seconds`, `complete` and
+`status`. Minimum/maximum results contain a `price` interval (or `null`),
+`interval_count`, `coverage_seconds`, `expected_seconds` and `status`.
+
+`status` is `empty` (no intervals), `incomplete` (partial day) or
+`complete` (the entire local calendar day is covered). Missing prices are
+never filled in; the average of an empty series is `null`. Overlapping,
+duplicate or out-of-day intervals are rejected. Coverage is measured in
+elapsed seconds, including 23- and 25-hour daylight-saving transition days.
+Minimum and maximum ties select the first interval in the upstream list.
+For exact response shapes, see [MCP_SPEC.md](MCP_SPEC.md).
 
 ## Authentication
 
@@ -101,9 +135,8 @@ Tests use mock clients; they do not require production credentials. These comman
 
 ## Known limitations
 
-- Environment-based login and explicit site-reference selection are implemented, but token lifecycle, privacy-safe error mapping and operational validation remain pending.
-- Current-interval and gas-only extraction use upstream `current_hour`; complete serialization and integration validation remain pending.
-- Upstream response serialization and privacy-safe error handling need verification.
+- Environment-based login and explicit site-reference selection are implemented; persistent token lifecycle and operational validation remain pending.
+- Normalized price responses and generic error mapping have unit coverage; real upstream and MCP transport interoperability still require validation.
 - End-to-end MCP client interoperability has not been validated.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md), [MCP_SPEC.md](MCP_SPEC.md), [AI_POLICY.md](AI_POLICY.md) and [SECURITY.md](SECURITY.md). Do not commit credentials or personal account data.
@@ -114,4 +147,4 @@ See [ARCHITECTURE.md](ARCHITECTURE.md), [MCP_SPEC.md](MCP_SPEC.md), [AI_POLICY.m
 
 **External ChatGPT access:** Not production-ready yet. The built-in Streamable HTTP listener is **loopback-only and unauthenticated**. Do not expose it publicly or treat a TLS tunnel alone as sufficient authentication. A production deployment needs an HTTPS ingress with validated client authentication and authorization, restricted access to the upstream loopback service, rate limiting, request/body size limits, TLS certificate management, and documented token rotation. Verify that the intended ChatGPT MCP connector supports the chosen authentication flow before deployment. A reverse proxy or tunnel must not forward unauthenticated public requests to `/mcp`.
 
-**Release blockers:** Verify all CI checks on the exact release commit; replace legacy placeholder tool responses or remove those modules; normalize upstream pricing data to bounded, stable JSON; validate real MCP tool calls over both transports; test upstream timeouts, authentication failures, missing data, and time-zone boundaries; and document a rollback procedure. Do not describe the service as production-ready until these checks pass.
+**Release blockers:** Verify all CI checks on the exact release commit; review legacy unused models and modules; validate real MCP tool calls over both transports; test upstream timeouts, authentication failures, missing data, and time-zone boundaries; and document a rollback procedure. Do not describe the service as production-ready until these checks pass.
