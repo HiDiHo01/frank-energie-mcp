@@ -41,6 +41,66 @@ Intervals must have valid, ordered, timezone-aware timestamps and a finite numer
 
 There is no `status/source/data` response envelope. The account and site responses use separate minimal schemas in `server.py`. The 200-entry limit is a **defensive MCP response-size bound**, not an upstream API contract. Upstream `PriceResolution` supports `PT15M` and `PT60M`; for complete Europe/Amsterdam calendar days these imply 92/96/100 or 23/24/25 intervals respectively (spring DST/normal/autumn DST). Actual API responses may be incomplete, so these counts are not enforced. The 200-entry cap intentionally leaves headroom beyond a full day while rejecting unexpectedly large series.
 
+## Daily statistics contracts
+
+`get_average_prices`, `get_lowest_price` and `get_highest_price` accept
+`day: date | None = None` and `resolution: "PT15M" | "PT60M" = "PT15M"`.
+`day` is an ISO 8601 calendar date; omitted dates resolve to the current
+`Europe/Amsterdam` date. Each operation requests upstream
+`prices(day, resolution=resolution)` and uses `normalize_market_prices`
+before aggregation or selection.
+
+The outer response always has `date` (ISO date), `resolution`,
+`electricity` and `gas` fields. The following is an illustrative shape,
+not live API data:
+
+```json
+{
+  "date": "2026-06-15",
+  "resolution": "PT15M",
+  "electricity": {
+    "average_total": 0.25,
+    "interval_count": 1,
+    "first_interval": "2026-06-15T00:00:00+02:00",
+    "last_interval": "2026-06-15T00:15:00+02:00",
+    "coverage_seconds": 900,
+    "expected_seconds": 86400,
+    "complete": false,
+    "status": "incomplete"
+  },
+  "gas": {
+    "average_total": null,
+    "interval_count": 0,
+    "first_interval": null,
+    "last_interval": null,
+    "coverage_seconds": 0,
+    "expected_seconds": 86400,
+    "complete": false,
+    "status": "empty"
+  }
+}
+```
+
+Average values are arithmetic means of available normalized `total` values
+for each energy type; they are not duration-weighted. An empty series returns
+`average_total: null`. No missing prices are synthesized.
+
+The minimum and maximum tools replace the average-specific fields with
+`price` (a complete normalized `PriceInterval`, or `null`), and include
+`interval_count`, `coverage_seconds`, `expected_seconds`, and `status`.
+They choose the minimum or maximum `total` value independently for electricity
+and gas. Negative prices are supported; tied extremes select the first
+matching interval in the upstream list.
+
+For all three operations, each interval must fall entirely within the
+requested Amsterdam calendar day. Overlaps and duplicates are rejected.
+`coverage_seconds` sums elapsed interval durations; `expected_seconds`
+is the actual local-day duration (82800, 86400 or 90000 seconds for
+23-, 24- or 25-hour days). `status` is `empty` when there are no
+intervals, `complete` when observed coverage equals the full day,
+otherwise `incomplete`. These operations do not claim that upstream
+always supplies a full day of prices.
+
 ## Authentication and upstream access
 
 `FrankEnergieLibraryBridge` creates an upstream `python-frank-energie` client per request, optionally logs in, and closes the client in a `finally` block.
