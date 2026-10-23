@@ -98,14 +98,16 @@ async def test_service_fetches_once_and_mcp_delegates() -> None:
     """Keep upstream usage bounded and expose the tool over FastMCP."""
     client = AsyncMock()
     client.prices.return_value = SimpleNamespace(
-        electricity=SimpleNamespace(price_data=[
-            SimpleNamespace(
-                date_from=START,
-                date_till=START + timedelta(minutes=15),
-                total=0.1,
-                per_unit="kWh",
-            )
-        ]),
+        electricity=SimpleNamespace(
+            price_data=[
+                SimpleNamespace(
+                    date_from=START,
+                    date_till=START + timedelta(minutes=15),
+                    total=0.1,
+                    per_unit="kWh",
+                )
+            ]
+        ),
         gas=SimpleNamespace(price_data=[]),
     )
     service = FrankEnergieService(FrankEnergieLibraryBridge(factory=lambda: client))
