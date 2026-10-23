@@ -88,6 +88,9 @@ async def test_server_registers_tools_resources_and_prompts(
         "get_price_volatility",
         "compare_days",
         "get_price_statistics",
+        "get_smart_battery_count",
+        "get_smart_pv_system_count",
+        "get_electric_vehicle_count",
         "get_account",
         "list_sites",
     }
