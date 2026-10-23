@@ -18,8 +18,8 @@ def test_server_name() -> None:
 
 
 @pytest.mark.asyncio
-async def test_registers_six_tools() -> None:
-    """Expose all six documented tools."""
+async def test_registers_seven_tools() -> None:
+    """Expose all seven documented tools."""
     server = create_server(AsyncMock())
     tools = await server.list_tools()
     assert {tool.name for tool in tools} == {
@@ -27,6 +27,7 @@ async def test_registers_six_tools() -> None:
         "get_today_prices",
         "get_tomorrow_prices",
         "get_gas_price",
+        "get_average_prices",
         "get_account",
         "list_sites",
     }
@@ -52,6 +53,7 @@ async def test_current_prices_delegates_to_service() -> None:
         ("get_today_prices", "get_today_prices"),
         ("get_tomorrow_prices", "get_tomorrow_prices"),
         ("get_gas_price", "get_gas_price"),
+        ("get_average_prices", "get_average_prices"),
         ("get_account", "get_account"),
         ("list_sites", "list_sites"),
     ],
