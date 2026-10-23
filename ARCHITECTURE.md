@@ -36,7 +36,7 @@ FastMCP handlers -> minimal AccountResponse / SitesResponse
 | Module | Responsibility |
 | --- | --- |
 | `__main__.py` | Invokes `server.main()` |
-| `server.py` | FastMCP creation, sixteen tool registrations, resource, prompt, safe tool error handling, transport configuration, and minimal account/site responses |
+| `server.py` | FastMCP creation, twenty-one tool registrations, resource, prompt, safe tool error handling, transport configuration, and minimal account/site responses |
 | `library.py` | `FrankEnergieService`, typed upstream protocol, managed `FrankEnergieLibraryBridge`, environment configuration, and active-interval selection |
 | `price_schemas.py` | Strict Pydantic price models, explicit field whitelisting, timestamp/amount validation, JSON normalization, and array bounds |
 | `tools/__init__.py` | Legacy package retained for import compatibility; tool implementations now live in `server.py` |
@@ -48,7 +48,7 @@ Separate `auth.py`, `config.py`, `resources/`, and `prompts/` implementations ar
 
 ### MCP layer
 
-- Expose sixteen asynchronous read-only tools, one static resource, and one static prompt.
+- Expose twenty-one asynchronous read-only tools, one static resource, and one static prompt.
 - Validate `resolution` as `PT15M` or `PT60M` at the tool boundary.
 - Use `Europe/Amsterdam` dates for today/tomorrow and optional-date statistical price requests.
 - Select upstream `current_hour` records for current electricity/gas prices.
@@ -119,6 +119,16 @@ over complete windows. Thresholds group adjacent qualifying bins;
 split blocks are selected greedily without overlap. The battery
 model estimates one charge-before-discharge cycle and does not claim
 to be a comprehensive operational optimization.
+
+## Additional analytics architecture
+
+Descriptive statistics, price trend and volatility calculations reside
+in `optimization.py`, using validated, chronological public intervals.
+The negative-price tool delegates to the existing threshold grouping
+logic. Day comparison reuses the same statistical helper on two
+independent upstream day requests. Population standard deviation and
+linear interpolation for quartiles are documented API semantics;
+adjacent-change metrics never bridge missing intervals.
 
 ## Authentication and privacy
 
