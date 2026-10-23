@@ -132,3 +132,62 @@ async def test_current_prices_selects_upstream_active_records(
     }
     assert result["gas"] is None
     client.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_authenticated_account_uses_configured_site(client: AsyncMock) -> None:
+    """Authenticate before retrieving account data for the configured site."""
+    bridge = FrankEnergieLibraryBridge(
+        factory=lambda: client,
+        username="test@example.invalid",
+        password="dummy-test-password",
+        site_reference="test-site",
+    )
+    service = FrankEnergieService(bridge)
+    client.user.return_value = {"id": "synthetic-account"}
+
+    assert await service.get_account() == {"id": "synthetic-account"}
+    client.login.assert_awaited_once_with("test@example.invalid", "dummy-test-password")
+    client.user.assert_awaited_once_with("test-site")
+    client.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_account_missing_site_does_not_start_session(client: AsyncMock) -> None:
+    """Reject missing site configuration before accessing upstream services."""
+    service = FrankEnergieService(
+        FrankEnergieLibraryBridge(
+            factory=lambda: client,
+            username="test@example.invalid",
+            password="dummy-test-password",
+        )
+    )
+    with pytest.raises(RuntimeError, match="FRANK_ENERGIE_SITE_REFERENCE"):
+        await service.get_account()
+    client.login.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_login_failure_closes_session(client: AsyncMock) -> None:
+    """Always close the upstream client when login fails."""
+    client.login.side_effect = RuntimeError("Simulated login failure")
+    service = FrankEnergieService(
+        FrankEnergieLibraryBridge(
+            factory=lambda: client,
+            username="test@example.invalid",
+            password="dummy-test-password",
+        )
+    )
+    with pytest.raises(RuntimeError, match="Simulated login failure"):
+        await service.get_today_prices()
+    client.prices.assert_not_awaited()
+    client.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_sites_require_credentials(client: AsyncMock) -> None:
+    """Do not send an unauthenticated site request."""
+    service = FrankEnergieService(FrankEnergieLibraryBridge(factory=lambda: client))
+    with pytest.raises(RuntimeError, match="requires Frank Energie credentials"):
+        await service.list_sites()
+    client.UserSites.assert_not_awaited()
