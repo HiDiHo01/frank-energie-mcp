@@ -311,6 +311,17 @@ def create_server(
         )
 
     @server.tool()
+    async def get_daily_consumption_statistics(
+        start_date: date, end_date: date
+    ) -> object:
+        """Aggregate daily meter readings in an inclusive calendar-date range."""
+        return await safe_tool_call(
+            lambda: energy_service.get_daily_consumption_statistics(
+                start_date, end_date
+            )
+        )
+
+    @server.tool()
     async def get_invoice_statistics(year: int) -> object:
         """Aggregate invoice totals for a year without invoice identifiers."""
         return await safe_tool_call(lambda: energy_service.get_invoice_statistics(year))
