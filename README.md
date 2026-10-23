@@ -568,3 +568,11 @@ are required; device identifiers and account details are not returned.
 and `total_result`. Missing numeric values remain `null`. It does not
 return device or account identifiers, and does not compute financial
 results independently. Credentials are required.
+
+## Monthly actual versus expected usage
+
+`get_monthly_usage_differences(month)` accepts a `YYYY-MM` month and
+returns the upstream electricity, gas and feed-in usage difference blocks,
+including actual and expected usage, average unit prices and costs. It
+requires account credentials and `FRANK_ENERGIE_SITE_REFERENCE`. No
+invoice, account or delivery-site identifiers are returned.
