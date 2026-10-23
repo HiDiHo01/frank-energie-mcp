@@ -36,7 +36,7 @@ FastMCP handlers -> minimal AccountResponse / SitesResponse
 | Module | Responsibility |
 | --- | --- |
 | `__main__.py` | Invokes `server.main()` |
-| `server.py` | FastMCP creation, seven tool registrations, resource, prompt, safe tool error handling, transport configuration, and minimal account/site responses |
+| `server.py` | FastMCP creation, nine tool registrations, resource, prompt, safe tool error handling, transport configuration, and minimal account/site responses |
 | `library.py` | `FrankEnergieService`, typed upstream protocol, managed `FrankEnergieLibraryBridge`, environment configuration, and active-interval selection |
 | `price_schemas.py` | Strict Pydantic price models, explicit field whitelisting, timestamp/amount validation, JSON normalization, and array bounds |
 | `tools/__init__.py` | Legacy package retained for import compatibility; tool implementations now live in `server.py` |
@@ -48,7 +48,7 @@ Separate `auth.py`, `config.py`, `resources/`, and `prompts/` implementations ar
 
 ### MCP layer
 
-- Expose seven asynchronous read-only tools, one static resource, and one static prompt.
+- Expose nine asynchronous read-only tools, one static resource, and one static prompt.
 - Validate `resolution` as `PT15M` or `PT60M` at the tool boundary.
 - Use `Europe/Amsterdam` dates for today/tomorrow price requests.
 - Select upstream `current_hour` records for current electricity/gas prices.
@@ -93,6 +93,7 @@ The default runtime is stdio. Optional Streamable HTTP binds only to `127.0.0.1`
 
 ## Current limitations and future work
 
+- `get_lowest_price` and `get_highest_price` select minimum and maximum normalized total-price intervals using the shared coverage validation.
 - `get_average_prices` calculates the arithmetic mean of normalized `total` values over all returned intervals; it reports missing coverage and does not impute missing prices.\n- The minimal `get_account` response indicates success only; it is not an account summary.
 - Site discovery returns a count, not selectable site details.
 - No persistent login/token lifecycle is implemented in this MCP layer.
