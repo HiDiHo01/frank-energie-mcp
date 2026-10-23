@@ -318,6 +318,13 @@ def create_server(
         )
 
     @server.tool()
+    async def get_smart_battery_status(device_id: str) -> object:
+        """Read state of charge, status and capacity of one linked battery."""
+        return await safe_tool_call(
+            lambda: energy_service.get_smart_battery_status(device_id)
+        )
+
+    @server.tool()
     async def get_account() -> object:
         """Get the authenticated account information."""
         await safe_tool_call(energy_service.get_account)
