@@ -116,11 +116,13 @@ def test_market_series_rejects_unsupported_shapes(entries: Any) -> None:
 def test_strict_response_models_reject_unknown_fields() -> None:
     """No accidental account or interval fields enter the public schemas."""
     with pytest.raises(ValidationError):
-        PriceInterval(
-            date_from=datetime(2026, 10, 23, 10, tzinfo=UTC),
-            date_till=datetime(2026, 10, 23, 11, tzinfo=UTC),
-            total=0.25,
-            token="private",
+        PriceInterval.model_validate(
+            {
+                "date_from": datetime(2026, 10, 23, 10, tzinfo=UTC),
+                "date_till": datetime(2026, 10, 23, 11, tzinfo=UTC),
+                "total": 0.25,
+                "token": "private",
+            }
         )
     with pytest.raises(ValidationError):
         MarketPriceResponse.model_validate({"electricity": [], "gas": [], "token": "private"})
