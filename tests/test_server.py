@@ -18,8 +18,8 @@ def test_server_name() -> None:
 
 
 @pytest.mark.asyncio
-async def test_registers_thirty_nine_tools() -> None:
-    """Expose all thirty-nine documented tools."""
+async def test_registers_forty_tools() -> None:
+    """Expose all forty documented tools."""
     server = create_server(AsyncMock())
     tools = await server.list_tools()
     assert {tool.name for tool in tools} == {
@@ -60,6 +60,7 @@ async def test_registers_thirty_nine_tools() -> None:
         "get_smart_battery_fleet_statistics",
         "get_electric_vehicle_statistics",
         "get_smart_pv_fleet_statistics",
+        "get_current_month_cost_summary",
         "get_account",
         "list_sites",
     }
