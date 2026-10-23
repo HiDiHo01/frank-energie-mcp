@@ -36,7 +36,7 @@ FastMCP handlers -> minimal AccountResponse / SitesResponse
 | Module | Responsibility |
 | --- | --- |
 | `__main__.py` | Invokes `server.main()` |
-| `server.py` | FastMCP creation, nine tool registrations, resource, prompt, safe tool error handling, transport configuration, and minimal account/site responses |
+| `server.py` | FastMCP creation, eleven tool registrations, resource, prompt, safe tool error handling, transport configuration, and minimal account/site responses |
 | `library.py` | `FrankEnergieService`, typed upstream protocol, managed `FrankEnergieLibraryBridge`, environment configuration, and active-interval selection |
 | `price_schemas.py` | Strict Pydantic price models, explicit field whitelisting, timestamp/amount validation, JSON normalization, and array bounds |
 | `tools/__init__.py` | Legacy package retained for import compatibility; tool implementations now live in `server.py` |
@@ -48,7 +48,7 @@ Separate `auth.py`, `config.py`, `resources/`, and `prompts/` implementations ar
 
 ### MCP layer
 
-- Expose nine asynchronous read-only tools, one static resource, and one static prompt.
+- Expose eleven asynchronous read-only tools, one static resource, and one static prompt.
 - Validate `resolution` as `PT15M` or `PT60M` at the tool boundary.
 - Use `Europe/Amsterdam` dates for today/tomorrow and optional-date statistical price requests.
 - Select upstream `current_hour` records for current electricity/gas prices.
@@ -92,6 +92,19 @@ without assuming the API returns every interval. It rejects overlaps,
 duplicates and intervals outside the requested day. The current
 implementation selects the first upstream record on equal extrema and
 does not weight average prices by interval duration.
+
+## Consecutive-window selection
+
+The service fetches one normalized public price series for the selected
+Amsterdam date. Both `get_lowest_period` and `get_highest_period` use
+the same window-selection helper and reuse the existing interval chronology
+and day-coverage validation. Candidate windows must consist of adjacent
+15- or 60-minute records, with the requested total elapsed duration.
+The ranking uses the mean normalized `total` price; no tax or markup
+logic is duplicated. Missing intervals invalidate affected windows,
+while other complete windows remain eligible. The algorithm returns
+`null` when no complete window exists, and prefers the earliest window
+for tied averages.
 
 ## Authentication and privacy
 
