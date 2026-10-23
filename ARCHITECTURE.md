@@ -329,3 +329,9 @@ exposes no account or device identifiers and performs no mutations.
 The PV financial result tool delegates to the upstream PV system summary
 and allowlists cumulative bonus and result values. It does not duplicate
 upstream calculations or expose identifiers.
+
+## Monthly usage differences boundary
+
+Monthly usage differences are read from the upstream `MonthInsights`
+`Difference` objects. The MCP layer only validates and allowlists values;
+it does not independently calculate expected usage, cost or variances.
