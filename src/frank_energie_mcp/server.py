@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 from collections.abc import Awaitable, Callable
+from datetime import date
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
@@ -86,6 +87,15 @@ def create_server(
         )
 
     @server.tool()
+    async def get_average_prices(
+        day: date | None = None, resolution: PriceResolution = "PT15M"
+    ) -> object:
+        """Average all available electricity and gas total prices for a local date."""
+        return await safe_tool_call(
+            lambda: energy_service.get_average_prices(day=day, resolution=resolution)
+        )
+
+    @server.tool()
     async def get_gas_price(resolution: PriceResolution = "PT15M") -> object:
         """Get today's pricing data including gas prices."""
         return await safe_tool_call(lambda: energy_service.get_gas_price(resolution=resolution))
@@ -111,7 +121,7 @@ def create_server(
         return (
             "Read-only Frank Energie market prices are available through "
             "get_current_prices, get_today_prices, get_tomorrow_prices, "
-            "and get_gas_price. Account access requires authentication."
+            "get_average_prices, and get_gas_price. Account access requires authentication."
         )
 
     @server.prompt()
