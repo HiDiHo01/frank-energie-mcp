@@ -829,6 +829,58 @@ class FrankEnergieService:
         result["gas_excluded"] = excluded
         return result
 
+    async def get_monthly_usage_differences(self, month: str) -> dict[str, Any]:
+        """Expose upstream actual/expected usage and cost differences by energy type."""
+        self._require_credentials()
+        if not self.bridge.site_reference:
+            raise RuntimeError("Monthly insights require FRANK_ENERGIE_SITE_REFERENCE.")
+        if not isinstance(month, str) or len(month) != 7 or month[4] != "-":
+            raise ValueError("month must be in YYYY-MM format.")
+        try:
+            parsed_month = date.fromisoformat(f"{month}-01")
+        except ValueError as exc:
+            raise ValueError("month must be a valid YYYY-MM calendar month.") from exc
+        if parsed_month.strftime("%Y-%m") != month:
+            raise ValueError("month must be in YYYY-MM format.")
+        async with self.bridge.session() as client:
+            insights = await client.month_insights(self.bridge.site_reference, month)
+        if insights is None:
+            return {"available": False, "month": month}
+        result: dict[str, Any] = {"available": True, "month": month}
+        fields = (
+            "actualUsage",
+            "actualAverageUnitPrice",
+            "actualCosts",
+            "expectedUsage",
+            "expectedAverageUnitPrice",
+            "expectedCosts",
+        )
+        for category, attribute in (
+            ("electricity", "electricityDifference"),
+            ("gas", "gasDifference"),
+            ("feed_in", "feedInDifference"),
+        ):
+            difference = getattr(insights, attribute, None)
+            if difference is None:
+                result[category] = None
+                continue
+            values: dict[str, Any] = {}
+            unit = getattr(difference, "unit", None)
+            if not isinstance(unit, str) or not unit or len(unit) > 16:
+                raise ValueError("Unexpected monthly usage unit.")
+            values["unit"] = unit
+            for field in fields:
+                value = getattr(difference, field, None)
+                if (
+                    isinstance(value, bool)
+                    or not isinstance(value, (int, float))
+                    or not isfinite(value)
+                ):
+                    raise ValueError("Unexpected monthly usage difference.")
+                values[field] = float(value)
+            result[category] = values
+        return result
+
     async def get_monthly_cost_insights(self, month: str) -> dict[str, Any]:
         """Read upstream expected and actual monthly costs without account metadata."""
         self._require_credentials()
