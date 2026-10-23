@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
-from ..library import default_library_bridge
+from ..library import default_service
 from ..models import ToolResponse
 
 
@@ -32,9 +32,7 @@ def _extract_current_prices_payload(data: Any) -> CurrentPricesResult:
 
 async def get_current_prices() -> ToolResponse:
     """Return the current price payload from the Frank Energie library."""
-    bridge = default_library_bridge()
-    async with bridge.session() as client:
-        data = await client.prices(date.today(), date.today())
+    data = await default_service().get_current_prices()
 
     result = _extract_current_prices_payload(data)
     return ToolResponse(status="ok", data=result)
