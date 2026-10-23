@@ -224,3 +224,27 @@ async def test_current_prices_without_credentials_uses_public_endpoint(
     client.UserSites.assert_not_awaited()
     client.prices.assert_awaited_once()
     client.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_current_prices_prefers_api_per_unit_over_optional_unit(
+    service: FrankEnergieService, client: AsyncMock
+) -> None:
+    """The upstream Price model populates per_unit from GraphQL perUnit."""
+    now = datetime.now(UTC)
+    active = SimpleNamespace(
+        date_from=now,
+        date_till=now + timedelta(minutes=15),
+        total=0.25,
+        unit=None,
+        per_unit="kWh",
+        energy_type="electricity",
+    )
+    client.prices.return_value = SimpleNamespace(
+        electricity=SimpleNamespace(current_hour=active),
+        gas=SimpleNamespace(current_hour=None),
+    )
+
+    result = await service.get_current_prices()
+
+    assert result["electricity"]["unit"] == "kWh"
