@@ -338,6 +338,11 @@ def create_server(
         return await safe_tool_call(energy_service.get_account_country)
 
     @server.tool()
+    async def get_current_month_cost_summary() -> object:
+        """Read current-month expected and actual costs without identifiers."""
+        return await safe_tool_call(energy_service.get_current_month_cost_summary)
+
+    @server.tool()
     async def get_monthly_cost_insights(month: str) -> object:
         """Get upstream monthly expected and actual costs without customer metadata."""
         return await safe_tool_call(
