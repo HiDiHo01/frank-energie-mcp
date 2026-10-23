@@ -53,6 +53,9 @@ class _AsyncFrankEnergie(Protocol):
     async def invoices(self, site_reference: str) -> Any:
         """Return invoice data."""
 
+    async def month_insights(self, site_reference: str, date: str) -> Any:
+        """Return upstream monthly usage and cost insights."""
+
     async def month_summary(self) -> Any:
         """Return the month summary."""
 
@@ -652,6 +655,44 @@ class FrankEnergieService:
             "smart_capable_count": smart_capable_count,
             "smart_enabled_count": smart_enabled_count,
         }
+
+    async def get_monthly_cost_insights(self, month: str) -> dict[str, Any]:
+        """Read upstream expected and actual monthly costs without account metadata."""
+        self._require_credentials()
+        if not self.bridge.site_reference:
+            raise RuntimeError("Monthly insights require FRANK_ENERGIE_SITE_REFERENCE.")
+        if not isinstance(month, str) or len(month) != 7 or month[4] != "-":
+            raise ValueError("month must be in YYYY-MM format.")
+        try:
+            parsed_month = date.fromisoformat(f"{month}-01")
+        except ValueError as exc:
+            raise ValueError("month must be a valid YYYY-MM calendar month.") from exc
+        if parsed_month.strftime("%Y-%m") != month:
+            raise ValueError("month must be in YYYY-MM format.")
+        async with self.bridge.session() as client:
+            insights = await client.month_insights(self.bridge.site_reference, month)
+        if insights is None:
+            return {"available": False, "month": month}
+        fields = (
+            "expectedCosts",
+            "expectedCostsGas",
+            "expectedCostsFixed",
+            "expectedCostsElectricity",
+            "expectedCostsFeedIn",
+            "expectedCostsUntilLastMeterReading",
+            "actualCostsUntilLastMeterReading",
+        )
+        result: dict[str, Any] = {"available": True, "month": month}
+        for field in fields:
+            value = getattr(insights, field, None)
+            if value is not None and (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not isfinite(value)
+            ):
+                raise ValueError("Unexpected monthly cost value.")
+            result[field] = float(value) if value is not None else None
+        return result
 
     async def get_period_usage_and_costs(
         self, start_date: date
