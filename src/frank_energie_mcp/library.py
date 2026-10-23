@@ -10,7 +10,6 @@ from datetime import date, datetime, timedelta
 from typing import Any, Literal, Protocol, cast
 from zoneinfo import ZoneInfo
 
-
 PriceResolution = Literal["PT15M", "PT60M"]
 
 
