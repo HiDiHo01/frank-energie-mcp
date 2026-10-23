@@ -36,7 +36,17 @@ async def run() -> None:
     now = datetime.now(start.tzinfo)
     if not start <= now < end:
         raise ValueError("Electricity price interval does not cover current time.")
-    if electricity.get("unit") != "kWh":
+    actual_unit = electricity.get("unit")
+    if actual_unit != "kWh":
+        # Only expose a bounded, expected unit string; never log arbitrary API data.
+        safe_unit = (
+            actual_unit
+            if isinstance(actual_unit, str)
+            and len(actual_unit) <= 24
+            and all(char.isascii() and (char.isalnum() or char in "/€._- ") for char in actual_unit)
+            else "<missing or invalid>"
+        )
+        print(f"Actual electricity unit: {safe_unit!r}", file=sys.stderr)
         raise ValueError("Electricity price unit is not kWh.")
     print("PASS: anonymous electricity price and timezone-aware interval validated.")
     print(f"Price: {price} EUR/kWh; interval: {start.isoformat()} - {end.isoformat()}")
