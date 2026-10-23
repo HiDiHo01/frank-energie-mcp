@@ -97,7 +97,7 @@ async def test_upstream_error_does_not_leak_into_logs(
         caplog.at_level(logging.WARNING, logger="frank_energie_mcp.server"),
         suppress(Exception),
     ):
-            await server.call_tool("get_account", {})
+        await server.call_tool("get_account", {})
 
     output = caplog.text
     assert "category=ValueError" in output
