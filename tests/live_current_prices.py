@@ -21,9 +21,7 @@ async def run() -> None:
     # Use the same factory as production, but explicitly disable all authentication.
     from python_frank_energie.frank_energie import FrankEnergie
 
-    service = FrankEnergieService(
-        FrankEnergieLibraryBridge(factory=FrankEnergie)
-    )
+    service = FrankEnergieService(FrankEnergieLibraryBridge(factory=FrankEnergie))
     result = await asyncio.wait_for(service.get_current_prices(), timeout=40)
     electricity = result.get("electricity")
     if not isinstance(electricity, dict):
