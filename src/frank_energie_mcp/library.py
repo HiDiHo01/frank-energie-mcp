@@ -10,6 +10,8 @@ from datetime import date, datetime, timedelta
 from typing import Any, Literal, Protocol, cast
 from zoneinfo import ZoneInfo
 
+from .price_schemas import normalize_interval, normalize_market_prices
+
 PriceResolution = Literal["PT15M", "PT60M"]
 
 
@@ -88,15 +90,17 @@ class FrankEnergieService:
     async def get_today_prices(self, resolution: PriceResolution = "PT15M") -> Any:
         """Return today's prices."""
         async with self.bridge.session() as client:
-            return await client.prices(
+            prices = await client.prices(
                 datetime.now(ZoneInfo("Europe/Amsterdam")).date(), resolution=resolution
             )
+        return normalize_market_prices(prices)
 
     async def get_tomorrow_prices(self, resolution: PriceResolution = "PT15M") -> Any:
         """Return tomorrow's prices."""
         tomorrow = datetime.now(ZoneInfo("Europe/Amsterdam")).date() + timedelta(days=1)
         async with self.bridge.session() as client:
-            return await client.prices(tomorrow, resolution=resolution)
+            prices = await client.prices(tomorrow, resolution=resolution)
+        return normalize_market_prices(prices)
 
     async def get_gas_price(self, resolution: PriceResolution = "PT15M") -> dict[str, Any] | None:
         """Return the currently applicable gas price, or None if unavailable."""
@@ -128,13 +132,7 @@ def _current_price(series: Any) -> dict[str, Any] | None:
     price = series.current_hour
     if price is None:
         return None
-    return {
-        "date_from": price.date_from.isoformat(),
-        "date_till": price.date_till.isoformat(),
-        "total": price.total,
-        "unit": getattr(price, "per_unit", None) or price.unit,
-        "energy_type": price.energy_type,
-    }
+    return normalize_interval(price)
 
 
 def default_library_bridge() -> FrankEnergieLibraryBridge:
