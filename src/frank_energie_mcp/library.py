@@ -69,6 +69,9 @@ class _AsyncFrankEnergie(Protocol):
     async def enode_vehicles(self) -> Any:
         """Return linked electric vehicles."""
 
+    async def smart_hvac_status(self) -> Any:
+        """Return authenticated smart HVAC status."""
+
     async def user_smart_feed_in(self) -> Any:
         """Return the current smart feed-in enrollment state."""
 
@@ -526,6 +529,29 @@ class FrankEnergieService:
         """Reject account-scoped requests without configured credentials."""
         if not self.bridge.username or not self.bridge.password:
             raise RuntimeError("Account access requires Frank Energie credentials.")
+
+    async def get_smart_hvac_status(self) -> dict[str, bool | None]:
+        """Return non-identifying smart HVAC activation and availability flags."""
+        self._require_credentials()
+        async with self.bridge.session() as client:
+            state = await client.smart_hvac_status()
+        if state is None:
+            return {
+                "available": False,
+                "is_activated": None,
+                "is_available_in_country": None,
+            }
+        activated = getattr(state, "isActivated", None)
+        in_country = getattr(state, "isAvailableInCountry", None)
+        if activated is not None and type(activated) is not bool:
+            raise ValueError("Unexpected smart HVAC activation flag.")
+        if in_country is not None and type(in_country) is not bool:
+            raise ValueError("Unexpected smart HVAC country availability flag.")
+        return {
+            "available": True,
+            "is_activated": activated,
+            "is_available_in_country": in_country,
+        }
 
     async def get_smart_feed_in_status(self) -> dict[str, bool | None]:
         """Return allowlisted feed-in eligibility flags, never user identifiers."""
