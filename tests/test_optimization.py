@@ -80,7 +80,11 @@ def test_invalid_battery_capacity(value: float) -> None:
 
 def test_validated_series_rejects_overlaps_and_outside_day() -> None:
     """Keep interval integrity validation independent of upstream ordering."""
-    base = {"date_from": START.isoformat(), "date_till": (START + timedelta(minutes=15)).isoformat(), "total": 0.2}
+    base = {
+        "date_from": START.isoformat(),
+        "date_till": (START + timedelta(minutes=15)).isoformat(),
+        "total": 0.2,
+    }
     assert len(validated_series([base], DAY, "PT15M")) == 1
     with pytest.raises(ValueError):
         validated_series([base, base], DAY, "PT15M")
