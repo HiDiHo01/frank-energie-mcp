@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Twenty-nine read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Thirty read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -43,6 +43,7 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_invoice_statistics` | `get_invoice_statistics(year)` | Authenticated annual invoice count, total and average |
 | `get_smart_pv_system_summary` | `get_smart_pv_system_summary(device_id)` | Authenticated, allowlisted PV status and totals |
 | `get_smart_battery_status` | `get_smart_battery_status(device_id)` | Authenticated battery charge, status, update timestamp and capacity |
+| `get_smart_hvac_status` | `get_smart_hvac_status()` | Authenticated HVAC activation and country-availability flags |
 | `get_account` | `get_account()` | After a successful authenticated account request, returns only `{"authenticated": true}`; account details are deliberately not exposed |
 | `list_sites` | `list_sites()` | `{"count": N}` for a recognized site collection; site identifiers and addresses are not exposed |
 
@@ -271,6 +272,14 @@ capacity is nonnegative and finite when provided, and timestamps
 must be timezone-aware. A null upstream detail result returns
 `{"available": false}`. The response excludes device identifiers
 and configuration, and never invokes upstream write operations.
+
+## Smart HVAC status contract
+
+`get_smart_hvac_status()` requires Frank Energie credentials. It
+returns `available: bool`, `is_activated: bool | null`, and
+`is_available_in_country: bool | null`. Null upstream enrollment
+produces `available=false` with null flags. User identifiers and
+creation timestamps are excluded; no HVAC mutation is invoked.
 
 ## Authentication and upstream access
 
