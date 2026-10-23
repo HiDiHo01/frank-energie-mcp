@@ -36,10 +36,17 @@ class _AsyncFrankEnergie(Protocol):
     async def prices(
         self, start_date: date | None = None, resolution: PriceResolution = "PT15M"
     ) -> Any:
-        """Return prices for the requested date range."""
+        """Return public market prices for the requested calendar date."""
 
-    async def user_prices(self, start_date: date, end_date: date | None = None) -> Any:
-        """Return user-specific prices for the requested date range."""
+    async def user_prices(
+        self,
+        site_reference: str,
+        user_country: str,
+        start_date: date,
+        end_date: date | None = None,
+        resolution: str | None = "PT15M",
+    ) -> Any:
+        """Return customer market prices using the upstream method signature."""
 
     async def close(self) -> None:
         """Close the underlying HTTP session."""
