@@ -154,9 +154,7 @@ def _average_series(intervals: list[dict[str, Any]], day: date) -> dict[str, Any
     local_zone = ZoneInfo("Europe/Amsterdam")
     start = datetime(day.year, day.month, day.day, tzinfo=local_zone).astimezone(UTC)
     next_day = day + timedelta(days=1)
-    end = datetime(
-        next_day.year, next_day.month, next_day.day, tzinfo=local_zone
-    ).astimezone(UTC)
+    end = datetime(next_day.year, next_day.month, next_day.day, tzinfo=local_zone).astimezone(UTC)
     ordered = sorted(
         intervals, key=lambda interval: datetime.fromisoformat(interval["date_from"])
     )
