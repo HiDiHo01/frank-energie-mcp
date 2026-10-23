@@ -66,9 +66,12 @@ def test_battery_requires_charge_before_discharge() -> None:
     result = battery_savings(records, 1, 1, 1, 0.8, "PT15M")
     assert result["status"] == "estimated"
     assert result["cycle"]["estimated_savings"] > 0
-    assert battery_savings(series([0.6] * 4 + [0.1] * 4), 1, 1, 1, 0.8, "PT15M")[
-        "cycle"
-    ]["estimated_savings"] <= 0
+    assert (
+        battery_savings(series([0.6] * 4 + [0.1] * 4), 1, 1, 1, 0.8, "PT15M")["cycle"][
+            "estimated_savings"
+        ]
+        <= 0
+    )
 
 
 @pytest.mark.parametrize("value", [0, -1, float("nan"), float("inf"), True])
