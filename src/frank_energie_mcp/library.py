@@ -5,7 +5,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from typing import Any, Protocol, cast
 
 
@@ -15,8 +16,11 @@ class _AsyncFrankEnergie(Protocol):
     async def login(self, username: str, password: str) -> Any:
         """Authenticate with Frank Energie."""
 
-    async def user(self) -> Any:
+    async def user(self, site_reference: str | None = None) -> Any:
         """Return the current user data."""
+
+    async def UserSites(self) -> Any:
+        """Return authenticated delivery sites."""
 
     async def invoices(self) -> Any:
         """Return invoice data."""
@@ -24,7 +28,7 @@ class _AsyncFrankEnergie(Protocol):
     async def month_summary(self) -> Any:
         """Return the month summary."""
 
-    async def prices(self, start_date: date, end_date: date) -> Any:
+    async def prices(self, start_date: datetime.date | None = None) -> Any:
         """Return prices for the requested date range."""
 
     async def user_prices(self, start_date: date, end_date: date | None = None) -> Any:
@@ -63,7 +67,7 @@ class FrankEnergieService:
     async def get_current_prices(self) -> Any:
         """Return current prices for today."""
         async with self.bridge.session() as client:
-            return await client.prices(date.today(), date.today())
+            return await client.prices(datetime.now(ZoneInfo("Europe/Amsterdam")).date(), date.today())
 
     async def get_today_prices(self) -> Any:
         """Return today's prices."""
@@ -74,7 +78,7 @@ class FrankEnergieService:
         """Return tomorrow's prices."""
         tomorrow = date.today() + timedelta(days=1)
         async with self.bridge.session() as client:
-            return await client.prices(tomorrow, tomorrow)
+            return await client.prices(tomorrow)
 
     async def get_gas_price(self) -> Any:
         """Return gas pricing data."""
@@ -84,7 +88,7 @@ class FrankEnergieService:
     async def get_account(self) -> Any:
         """Return the current account data."""
         async with self.bridge.session() as client:
-            return await client.user()
+            raise RuntimeError("Account retrieval requires an authenticated client and site reference.")
 
     async def list_sites(self) -> Any:
         """Return the available sites."""
