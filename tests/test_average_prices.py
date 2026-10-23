@@ -27,12 +27,16 @@ def _interval(start: datetime, minutes: int, total: float) -> SimpleNamespace:
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("day", "hours"), [(date(2026, 3, 29), 23), (date(2026, 6, 15), 24), (date(2026, 10, 25), 25)]
+    ("day", "hours"),
+    [(date(2026, 3, 29), 23), (date(2026, 6, 15), 24), (date(2026, 10, 25), 25)],
 )
 async def test_average_covers_dst_calendar_days(day: date, hours: int) -> None:
     """Use actual Amsterdam day duration and all available interval totals."""
     start = datetime(day.year, day.month, day.day, tzinfo=AMSTERDAM).astimezone(UTC)
-    electricity = [_interval(start + timedelta(minutes=i * 15), 15, 0.2 + (i % 2) * 0.2) for i in range(hours * 4)]
+    electricity = [
+        _interval(start + timedelta(minutes=i * 15), 15, 0.2 + (i % 2) * 0.2)
+        for i in range(hours * 4)
+    ]
     gas = [_interval(start, 60, 1.5)]
     client = AsyncMock()
     client.prices.return_value = SimpleNamespace(
@@ -61,7 +65,10 @@ async def test_empty_and_gapped_series() -> None:
     client = AsyncMock()
     client.prices.return_value = SimpleNamespace(
         electricity=SimpleNamespace(
-            price_data=[_interval(start, 15, 0.1), _interval(start + timedelta(minutes=30), 15, 0.3)]
+            price_data=[
+                _interval(start, 15, 0.1),
+                _interval(start + timedelta(minutes=30), 15, 0.3),
+            ]
         ),
         gas=SimpleNamespace(price_data=[]),
     )
@@ -84,7 +91,12 @@ async def test_overlapping_intervals_rejected() -> None:
     start = datetime(2026, 6, 14, 22, tzinfo=UTC)
     client = AsyncMock()
     client.prices.return_value = SimpleNamespace(
-        electricity=SimpleNamespace(price_data=[_interval(start, 30, 0.1), _interval(start + timedelta(minutes=15), 30, 0.3)]),
+        electricity=SimpleNamespace(
+            price_data=[
+                _interval(start, 30, 0.1),
+                _interval(start + timedelta(minutes=15), 30, 0.3),
+            ]
+        ),
         gas=SimpleNamespace(price_data=[]),
     )
     service = FrankEnergieService(FrankEnergieLibraryBridge(factory=lambda: client))
@@ -97,9 +109,15 @@ async def test_mcp_tool_delegates_date_and_resolution() -> None:
     """Verify the registered MCP tool passes both arguments to the service."""
     service = AsyncMock()
     service.get_average_prices.return_value = {
-        "date": "2026-06-15", "resolution": "PT60M",
-        "electricity": {}, "gas": {},
+        "date": "2026-06-15",
+        "resolution": "PT60M",
+        "electricity": {},
+        "gas": {},
     }
     server = create_server(service)
-    await server.call_tool("get_average_prices", {"day": "2026-06-15", "resolution": "PT60M"})
-    service.get_average_prices.assert_awaited_once_with(day=date(2026, 6, 15), resolution="PT60M")
+    await server.call_tool(
+        "get_average_prices", {"day": "2026-06-15", "resolution": "PT60M"}
+    )
+    service.get_average_prices.assert_awaited_once_with(
+        day=date(2026, 6, 15), resolution="PT60M"
+    )
