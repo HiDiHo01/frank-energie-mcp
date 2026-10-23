@@ -584,13 +584,13 @@ class FrankEnergieService:
         self._require_credentials()
         async with self.bridge.session() as client:
             data = await client.smart_pv_systems()
-        systems: list[Any]
         if data is None:
-            systems = []
+            systems: list[Any] = []
         else:
-            systems = getattr(data, "systems", None)
-            if not isinstance(systems, list):
+            raw_systems = getattr(data, "systems", None)
+            if not isinstance(raw_systems, list):
                 raise ValueError("Unexpected smart PV system collection.")
+            systems = raw_systems
         group_count = 0
         panel_count = 0
         panel_count_reported = 0
