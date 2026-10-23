@@ -104,6 +104,7 @@ async def test_server_registers_tools_resources_and_prompts(
         "get_monthly_cost_insights",
         "get_account_country",
         "get_smart_battery_fleet_statistics",
+        "get_electric_vehicle_statistics",
         "get_account",
         "list_sites",
     }
