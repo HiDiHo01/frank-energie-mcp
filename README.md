@@ -83,6 +83,7 @@ The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol e
 | Tool | `get_daily_consumption_statistics` | Aggregate recorded daily consumption (kWh) over an inclusive date range. |
 | Tool | `get_smart_battery_session_statistics` | Aggregate trading-session results for one battery and date range. |
 | Tool | `get_period_usage_and_costs` | Read electricity, gas and feed-in usage/cost totals for a billing period. |
+| Tool | `get_ev_charger_statistics` | Count linked EV chargers, reachable devices and smart charging capabilities. |
 | Tool | `get_account` | Requires credentials and a site reference; returns only `{"authenticated": true}` after a successful account request |
 | Tool | `list_sites` | Requires credentials; returns only the number of recognized delivery sites |
 | Resource | `frank-energie://capabilities` | Static description of capabilities |
@@ -419,6 +420,17 @@ remain null. Detailed usage items, upstream period identifiers
 and site references are excluded. This tool requires credentials
 and `FRANK_ENERGIE_SITE_REFERENCE`; it is read-only. The
 upstream billing-period totals are not reconstructed invoices.
+
+## EV charger statistics
+
+`get_ev_charger_statistics(start_date)` calls upstream
+`enode_chargers(site_reference, start_date)` with an ISO calendar
+date. It returns `charger_count`, `reachable_count`,
+`smart_capable_count`, and `smart_enabled_count`. Charger IDs,
+location details, interventions, and raw charge settings are
+excluded. This tool requires credentials and
+`FRANK_ENERGIE_SITE_REFERENCE`. It is read-only and does not
+change charging settings.
 
 ## Authentication
 
