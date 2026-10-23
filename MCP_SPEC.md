@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Forty-one read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Forty-two read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -444,3 +444,10 @@ The test suite covers service delegation, upstream call signatures, session clea
 returns `{available: bool, total_result: number | null}`. It delegates to
 upstream `smart_battery_details()` and rejects invalid or nonfinite
 results. The device ID is an input only and is not echoed in the response.
+
+## Smart PV financial result
+
+`get_smart_pv_financial_result(device_id)` requires credentials and
+returns `{available: bool, total_bonus: number | null, total_result: number | null}`.
+It uses the upstream PV summary model and rejects nonfinite totals.
+Device identifiers are accepted only as input and are not echoed.
