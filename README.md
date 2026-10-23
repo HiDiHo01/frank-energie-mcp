@@ -60,6 +60,16 @@ The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol e
 | Tool | `get_highest_price` | Highest available normalized total interval per energy type, with coverage status. |
 | Tool | `get_lowest_period` | Finds the cheapest uninterrupted window by average normalized total price. |
 | Tool | `get_highest_period` | Finds the most expensive uninterrupted window by average normalized total price. |
+| Tool | `get_best_start_time` | Finds the cheapest fully covered start window within optional time bounds. |
+| Tool | `calculate_energy_cost` | Estimates constant-power electricity consumption cost over a complete window. |
+| Tool | `get_price_threshold_periods` | Groups consecutive intervals strictly below or above a threshold. |
+| Tool | `get_negative_price_periods` | Finds consecutive negative-total electricity-price intervals. |
+| Tool | `get_price_trend` | Classifies the first-to-last available price change. |
+| Tool | `get_price_volatility` | Reports price dispersion and adjacent interval changes. |
+| Tool | `compare_days` | Compares two dates' price statistics and mean differences. |
+| Tool | `get_best_split_periods` | Selects inexpensive nonoverlapping fixed-length blocks. |
+| Tool | `calculate_battery_savings` | Estimates a single idealized battery charge/discharge cycle. |
+| Tool | `get_price_statistics` | Reports mean, median, quartiles and dispersion. |
 | Tool | `get_gas_price` | Returns the current gas interval or `null` when unavailable |
 | Tool | `get_account` | Requires credentials and a site reference; returns only `{"authenticated": true}` after a successful account request |
 | Tool | `list_sites` | Requires credentials; returns only the number of recognized delivery sites |
@@ -155,6 +165,102 @@ interval, idealized energy transfer at the specified round-trip
 efficiency, and no standing charges, battery degradation, export
 restrictions, household demand profile or dynamic power throttling.
 Do not use it as a guaranteed savings forecast.
+
+## Practical MCP tool calls
+
+The following are example tool **arguments**, not live prices. The MCP client
+invokes the named tool; these JSON objects are not shell commands.
+
+**Find the cheapest four consecutive hours:**
+
+```json
+{"period_minutes": 240, "day": "2026-10-23", "resolution": "PT15M"}
+```
+
+Tool: `get_lowest_period`.
+
+**Find a two-hour low-cost start window after 10:00 local time:**
+
+```json
+{
+  "duration_minutes": 120,
+  "day": "2026-10-23",
+  "resolution": "PT15M",
+  "earliest_start": "2026-10-23T10:00:00+02:00",
+  "latest_end": "2026-10-23T23:00:00+02:00"
+}
+```
+
+Tool: `get_best_start_time`.
+
+**Estimate a 2 kW appliance running for one hour:**
+
+```json
+{
+  "power_kw": 2.0,
+  "duration_minutes": 60,
+  "start_time": "2026-10-23T12:00:00+02:00",
+  "resolution": "PT15M"
+}
+```
+
+Tool: `calculate_energy_cost`. A full set of price intervals is required;
+an incomplete window produces `status: "incomplete"` and null costs.
+
+**Find periods strictly cheaper than 0.20 per kWh (electricity) or
+per m³ (gas):**
+
+```json
+{"threshold": 0.2, "below": true, "minimum_duration_minutes": 30}
+```
+
+Tool: `get_price_threshold_periods`. The same numeric threshold is applied
+independently to both energy types; units differ.
+
+**Find negative electricity-price periods:**
+
+```json
+{"minimum_duration_minutes": 30, "resolution": "PT15M"}
+```
+
+Tool: `get_negative_price_periods`. Zero does not qualify.
+
+**Select four hours as two independent two-hour blocks:**
+
+```json
+{"total_minutes": 240, "minimum_block_minutes": 120}
+```
+
+Tool: `get_best_split_periods`. Block selection is greedy, not a general
+globally optimal scheduling algorithm.
+
+**Estimate one battery charge/discharge cycle:**
+
+```json
+{
+  "capacity_kwh": 5.0,
+  "charge_power_kw": 2.5,
+  "discharge_power_kw": 2.5,
+  "round_trip_efficiency": 0.9
+}
+```
+
+Tool: `calculate_battery_savings`. The model is simplified and does not
+account for actual household consumption, degradation, or grid fees.
+
+**Compare two calendar days:**
+
+```json
+{"first_day": "2026-10-22", "second_day": "2026-10-23"}
+```
+
+Tool: `compare_days`. `mean_difference` is second day minus first day;
+missing prices are not imputed.
+
+**Inspect trend, volatility and descriptive statistics:** use
+`get_price_trend`, `get_price_volatility`, or `get_price_statistics`
+with `{"day": "2026-10-23", "resolution": "PT15M"}`. Trend also accepts
+`stable_tolerance` (absolute price units, default 0.005).
 
 ## Additional daily price analytics
 
