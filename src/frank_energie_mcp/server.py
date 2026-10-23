@@ -69,7 +69,9 @@ def create_server(
     @server.tool()
     async def get_current_prices(resolution: PriceResolution = "PT15M") -> object:
         """Get today's electricity and gas pricing data."""
-        return await safe_tool_call(lambda: energy_service.get_current_prices(resolution=resolution))
+        return await safe_tool_call(
+            lambda: energy_service.get_current_prices(resolution=resolution)
+        )
 
     @server.tool()
     async def get_today_prices(resolution: PriceResolution = "PT15M") -> object:
@@ -79,7 +81,9 @@ def create_server(
     @server.tool()
     async def get_tomorrow_prices(resolution: PriceResolution = "PT15M") -> object:
         """Get tomorrow's pricing data."""
-        return await safe_tool_call(lambda: energy_service.get_tomorrow_prices(resolution=resolution))
+        return await safe_tool_call(
+            lambda: energy_service.get_tomorrow_prices(resolution=resolution)
+        )
 
     @server.tool()
     async def get_gas_price(resolution: PriceResolution = "PT15M") -> object:
