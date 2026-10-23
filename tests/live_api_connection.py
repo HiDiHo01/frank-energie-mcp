@@ -13,7 +13,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from aiohttp import ClientError
-from python_frank_energie import FrankEnergie
+from python_frank_energie import FrankEnergie  # type: ignore[import-untyped]
 
 
 async def run() -> None:
