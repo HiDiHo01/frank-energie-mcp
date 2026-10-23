@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import logging
-from unittest.mock import patch
 from contextlib import suppress
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -158,7 +157,7 @@ async def test_mcp_price_resolution_parameter() -> None:
     server = create_server(service)
     await server.call_tool("get_current_prices", {"resolution": "PT60M"})
     service.get_current_prices.assert_awaited_once_with(resolution="PT60M")
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         await server.call_tool("get_current_prices", {"resolution": "PT30M"})
 
 
@@ -187,7 +186,6 @@ def test_http_transport_rejects_unsafe_configuration(
     monkeypatch.setenv("FRANK_ENERGIE_MCP_TRANSPORT", "streamable-http")
     monkeypatch.setenv("FRANK_ENERGIE_MCP_HOST", host)
     monkeypatch.setenv("FRANK_ENERGIE_MCP_PORT", port)
-    with patch("frank_energie_mcp.server.create_server") as factory:
-        with pytest.raises(ValueError):
-            main()
+    with patch("frank_energie_mcp.server.create_server") as factory, pytest.raises(ValueError):
+        main()
     factory.assert_not_called()
