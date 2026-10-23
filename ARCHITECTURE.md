@@ -70,7 +70,7 @@ Separate `auth.py`, `config.py`, `resources/`, and `prompts/` implementations ar
 6. Price results are normalized by `price_schemas.py`; account and site results are reduced to minimal public response models in `server.py`.
 7. FastMCP returns the response, or a generic `ToolError` on handled failures.
 
-Price interval normalization requires ordered timezone-aware timestamps, finite numeric totals, and no more than 200 intervals per energy type for full-day results. This bound is currently implementation-defined rather than verified against every upstream resolution or future API shape.
+Price interval normalization requires ordered timezone-aware timestamps, finite numeric totals, and no more than 200 intervals per energy type for full-day results. This is a defensive MCP response-size limit, **not** an upstream API limit. The upstream library supports `PT15M` and `PT60M`; complete Europe/Amsterdam days produce 92/96/100 or 23/24/25 intervals respectively, including DST transitions. The cap allows headroom and does not assert that upstream always returns complete days.
 
 ## Authentication and privacy
 
@@ -96,8 +96,8 @@ The default runtime is stdio. Optional Streamable HTTP binds only to `127.0.0.1`
 - The minimal `get_account` response indicates success only; it is not an account summary.
 - Site discovery returns a count, not selectable site details.
 - No persistent login/token lifecycle is implemented in this MCP layer.
-- The 200-interval limit and upstream resolution behavior need contract verification.
-- A real MCP client interoperability test and DST boundary tests are still outstanding.
+- The 200-interval cap is a defensive MCP bound; live upstream response behavior still needs verification.
+- Synthetic DST boundary regression tests cover both supported resolutions; real MCP client interoperability remains outstanding.
 - External HTTP access must not be enabled without verified authentication and authorization.
 - Future additions may include richer privacy-safe account summaries, dynamic resources, and price comparisons, without duplicating upstream business logic.
 
