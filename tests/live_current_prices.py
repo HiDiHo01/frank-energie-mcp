@@ -19,7 +19,7 @@ async def run() -> None:
             raise RuntimeError("Live test requires an environment without account credentials.")
 
     # Use the same factory as production, but explicitly disable all authentication.
-    from python_frank_energie.frank_energie import FrankEnergie
+    from python_frank_energie.frank_energie import FrankEnergie  # type: ignore[import-untyped]
 
     service = FrankEnergieService(FrankEnergieLibraryBridge(factory=FrankEnergie))
     result = await asyncio.wait_for(service.get_current_prices(), timeout=40)
