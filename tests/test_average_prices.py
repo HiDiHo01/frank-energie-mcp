@@ -121,3 +121,46 @@ async def test_mcp_tool_delegates_date_and_resolution() -> None:
     service.get_average_prices.assert_awaited_once_with(
         day=date(2026, 6, 15), resolution="PT60M"
     )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("method", "expected_total"),
+    [("get_lowest_price", -0.1), ("get_highest_price", 0.4)],
+)
+async def test_extreme_price_tools(method: str, expected_total: float) -> None:
+    """Choose min/max normalized totals, including negative electricity prices."""
+    day = date(2026, 6, 15)
+    start = datetime(2026, 6, 14, 22, tzinfo=UTC)
+    client = AsyncMock()
+    client.prices.return_value = SimpleNamespace(
+        electricity=SimpleNamespace(
+            price_data=[
+                _interval(start, 15, 0.4),
+                _interval(start + timedelta(minutes=15), 15, -0.1),
+                _interval(start + timedelta(minutes=30), 15, 0.2),
+            ]
+        ),
+        gas=SimpleNamespace(price_data=[]),
+    )
+    service = FrankEnergieService(FrankEnergieLibraryBridge(factory=lambda: client))
+    result = await getattr(service, method)(day=day, resolution="PT15M")
+    assert result["electricity"]["price"]["total"] == expected_total
+    assert result["electricity"]["interval_count"] == 3
+    assert result["electricity"]["status"] == "incomplete"
+    assert result["gas"]["price"] is None
+    assert result["gas"]["status"] == "empty"
+    client.prices.assert_awaited_once_with(day, resolution="PT15M")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("method", ["get_lowest_price", "get_highest_price"])
+async def test_extreme_price_mcp_delegation(method: str) -> None:
+    """Forward the selected day and resolution through the MCP tool."""
+    service = AsyncMock()
+    getattr(service, method).return_value = {"electricity": {}, "gas": {}}
+    server = create_server(service)
+    await server.call_tool(method, {"day": "2026-06-15", "resolution": "PT60M"})
+    getattr(service, method).assert_awaited_once_with(
+        day=date(2026, 6, 15), resolution="PT60M"
+    )
