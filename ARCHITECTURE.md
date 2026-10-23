@@ -191,6 +191,16 @@ flags and a derived availability flag. User IDs, registration
 timestamps and the raw upstream object are excluded. The MCP server
 does not expose smart HVAC setting mutations.
 
+## Daily consumption aggregation
+
+The read-only consumption tool delegates to upstream
+`meter_readings(site_reference)` and selects an inclusive
+calendar-date range. It validates dates, finite nonnegative kWh
+values and uniqueness of daily records before computing total and
+average per observed day. Raw readings and upstream account metadata
+never cross the MCP boundary. Credentials and a site reference are
+required; missing days are not fabricated as zero consumption.
+
 ## Authentication and privacy
 
 Public market-price tools work without configured credentials. Account/site operations require `FRANK_ENERGIE_USERNAME` and `FRANK_ENERGIE_PASSWORD`; account operations also require `FRANK_ENERGIE_SITE_REFERENCE`. The bridge reads these from the process environment. Credentials are not passed as MCP tool arguments.
