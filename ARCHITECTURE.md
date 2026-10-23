@@ -230,6 +230,15 @@ charger identifiers, intervention details or charging settings,
 and does not invoke upstream charging mutations. Credentials
 and a site reference are required.
 
+## Monthly cost insights boundary
+
+The monthly insights tool delegates to upstream
+`month_insights(site_reference, month)` with a validated
+calendar month. It exposes only expected/actual cost totals,
+preserving nullable values and rejecting nonfinite amounts.
+It does not serialize invoice IDs, account identifiers or
+meter-reading timestamps and performs no mutations.
+
 ## Authentication and privacy
 
 Public market-price tools work without configured credentials. Account/site operations require `FRANK_ENERGIE_USERNAME` and `FRANK_ENERGIE_PASSWORD`; account operations also require `FRANK_ENERGIE_SITE_REFERENCE`. The bridge reads these from the process environment. Credentials are not passed as MCP tool arguments.
