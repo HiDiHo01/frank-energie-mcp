@@ -43,6 +43,10 @@ Example client configuration (adapt the Python executable to the environment whe
 
 Price requests use the `Europe/Amsterdam` calendar date. Tool output is not yet guaranteed to follow a stable normalized JSON schema.
 
+## Authentication
+
+Account and delivery-site tools use the existing upstream `python-frank-energie` login method. Configure the server process with `FRANK_ENERGIE_USERNAME` and `FRANK_ENERGIE_PASSWORD`; set `FRANK_ENERGIE_SITE_REFERENCE` for `get_account`. Both credentials must be provided together. Missing credentials or site references cause descriptive errors before an account request is sent. Avoid putting credentials in repository files, command-line arguments, logs or screenshots. The server currently logs in for each managed upstream session and closes the client after each request. Token persistence, renewal across requests and credential rotation have not been validated.
+
 ## Architecture
 
 ```text
@@ -74,7 +78,7 @@ Tests use mock clients; they do not require production credentials. These comman
 
 ## Known limitations
 
-- Account authentication and site-reference selection are not implemented.
+- Environment-based login and explicit site-reference selection are implemented, but token lifecycle, privacy-safe error mapping and operational validation remain pending.
 - Current-interval and gas-only extraction use upstream `current_hour`; complete serialization and integration validation remain pending.
 - Upstream response serialization and privacy-safe error handling need verification.
 - End-to-end MCP client interoperability has not been validated.
