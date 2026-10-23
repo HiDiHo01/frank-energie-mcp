@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .library import FrankEnergieService, default_service
 
+
 class AccountResponse(BaseModel):
     """Non-identifying account response."""
 
@@ -91,7 +92,7 @@ def create_server(service: FrankEnergieService | None = None) -> FastMCP:
         data = await safe_tool_call(energy_service.list_sites)
         try:
             return SitesResponse(count=_count_sites(data)).model_dump(mode="json")
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             raise ToolError("Frank Energie request failed.") from None
 
     @server.resource("frank-energie://capabilities")
