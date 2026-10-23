@@ -7,8 +7,39 @@ from collections.abc import Awaitable, Callable
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
+from pydantic import BaseModel, ConfigDict, Field
 
 from .library import FrankEnergieService, default_service
+
+class AccountResponse(BaseModel):
+    """Non-identifying account response."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    authenticated: bool = True
+
+
+class SitesResponse(BaseModel):
+    """Non-identifying site summary."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    count: int = Field(ge=0)
+
+
+def _count_sites(data: object) -> int:
+    """Accept only recognized site collections."""
+    if isinstance(data, (list, tuple)):
+        return len(data)
+    if isinstance(data, dict):
+        for key in ("sites", "deliverySites"):
+            value = data.get(key)
+            if isinstance(value, (list, tuple)):
+                return len(value)
+    for key in ("sites", "deliverySites"):
+        value = getattr(data, key, None)
+        if isinstance(value, (list, tuple)):
+            return len(value)
+    raise ValueError("Unexpected site response structure.")
+
 
 SERVER_NAME = "frank-energie-mcp"
 _LOGGER = logging.getLogger(__name__)
@@ -51,12 +82,17 @@ def create_server(service: FrankEnergieService | None = None) -> FastMCP:
     @server.tool()
     async def get_account() -> object:
         """Get the authenticated account information."""
-        return await safe_tool_call(energy_service.get_account)
+        await safe_tool_call(energy_service.get_account)
+        return AccountResponse().model_dump(mode="json")
 
     @server.tool()
     async def list_sites() -> object:
         """Get the account data containing delivery sites."""
-        return await safe_tool_call(energy_service.list_sites)
+        data = await safe_tool_call(energy_service.list_sites)
+        try:
+            return SitesResponse(count=_count_sites(data)).model_dump(mode="json")
+        except (ValueError, TypeError):
+            raise ToolError("Frank Energie request failed.") from None
 
     @server.resource("frank-energie://capabilities")
     def capabilities() -> str:
