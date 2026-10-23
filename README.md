@@ -81,6 +81,7 @@ The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol e
 | Tool | `get_smart_battery_status` | Read a linked battery's state of charge, status, update time and capacity. |
 | Tool | `get_smart_hvac_status` | Read smart HVAC activation and country availability without personal data. |
 | Tool | `get_daily_consumption_statistics` | Aggregate recorded daily consumption (kWh) over an inclusive date range. |
+| Tool | `get_smart_battery_session_statistics` | Aggregate trading-session results for one battery and date range. |
 | Tool | `get_account` | Requires credentials and a site reference; returns only `{"authenticated": true}` after a successful account request |
 | Tool | `list_sites` | Requires credentials; returns only the number of recognized delivery sites |
 | Resource | `frank-energie://capabilities` | Static description of capabilities |
@@ -389,6 +390,21 @@ values and malformed upstream records are rejected. No raw meter
 readings, user IDs or site references are returned. This tool
 requires credentials and `FRANK_ENERGIE_SITE_REFERENCE` and
 does not modify upstream data.
+
+## Battery trading-session statistics
+
+`get_smart_battery_session_statistics(device_id, start_date, end_date)`
+calls the authenticated upstream `smart_battery_sessions` API.
+The inclusive date range must be ordered and span at most 366 days.
+The response includes `available`, `session_count`,
+`result_count`, `total_session_result` and
+`average_session_result`. Session results with null amounts
+are excluded from the financial aggregates but included in
+`session_count`. When no numeric results are available, total
+and average are null. Device identifiers, trade indexes and
+individual sessions are excluded. These totals are sums of
+upstream session results, not an invoice or guaranteed savings.
+This tool is read-only and requires credentials.
 
 ## Authentication
 
