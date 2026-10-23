@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Awaitable, Callable
 from typing import TypeVar
 
@@ -12,13 +13,15 @@ from .library import FrankEnergieService, default_service
 
 SERVER_NAME = "frank-energie-mcp"
 _Result = TypeVar("_Result")
+_LOGGER = logging.getLogger(__name__)
 
 
 async def safe_tool_call(operation: Callable[[], Awaitable[_Result]]) -> _Result:
     """Hide upstream exception details from MCP clients."""
     try:
         return await operation()
-    except Exception:
+    except Exception as exc:
+        _LOGGER.warning("MCP tool request failed; category=%s", type(exc).__name__)
         raise ToolError("Frank Energie request failed.") from None
 
 
