@@ -194,3 +194,33 @@ async def test_sites_require_credentials(client: AsyncMock) -> None:
     with pytest.raises(RuntimeError, match="requires Frank Energie credentials"):
         await service.list_sites()
     client.UserSites.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_current_prices_without_credentials_uses_public_endpoint(
+    service: FrankEnergieService, client: AsyncMock
+) -> None:
+    """Public electricity prices must work without logging into an account."""
+    start = datetime.now(UTC)
+    active = SimpleNamespace(
+        date_from=start,
+        date_till=start + timedelta(hours=1),
+        total=0.21,
+        unit="kWh",
+        energy_type="electricity",
+    )
+    client.prices.return_value = SimpleNamespace(
+        electricity=SimpleNamespace(current_hour=active),
+        gas=SimpleNamespace(current_hour=None),
+    )
+
+    result = await service.get_current_prices()
+
+    assert result["electricity"]["total"] == 0.21
+    assert result["electricity"]["unit"] == "kWh"
+    client.login.assert_not_awaited()
+    client.user_prices.assert_not_awaited()
+    client.user.assert_not_awaited()
+    client.UserSites.assert_not_awaited()
+    client.prices.assert_awaited_once()
+    client.close.assert_awaited_once()
