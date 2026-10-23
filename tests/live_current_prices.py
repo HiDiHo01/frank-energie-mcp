@@ -37,7 +37,7 @@ async def run() -> None:
     if not start <= now < end:
         raise ValueError("Electricity price interval does not cover current time.")
     actual_unit = electricity.get("unit")
-    if actual_unit != "kWh":
+    if not isinstance(actual_unit, str) or actual_unit.casefold() != "kwh":
         # Only expose a bounded, expected unit string; never log arbitrary API data.
         safe_unit = (
             actual_unit
