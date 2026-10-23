@@ -35,6 +35,7 @@ async def test_today_prices_uses_single_date(
     assert await service.get_today_prices() == {"electricity": []}
     assert isinstance(client.prices.await_args.args[0], date)
     assert len(client.prices.await_args.args) == 1
+    assert client.prices.await_args.kwargs == {"resolution": "PT15M"}
     client.close.assert_awaited_once()
 
 
@@ -248,3 +249,13 @@ async def test_current_prices_prefers_api_per_unit_over_optional_unit(
     result = await service.get_current_prices()
 
     assert result["electricity"]["unit"] == "kWh"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("resolution", ["PT15M", "PT60M"])
+async def test_requested_resolution_reaches_upstream(
+    service: FrankEnergieService, client: AsyncMock, resolution: str
+) -> None:
+    """Forward the requested resolution unchanged to the upstream library."""
+    await service.get_today_prices(resolution=resolution)
+    assert client.prices.await_args.kwargs == {"resolution": resolution}
