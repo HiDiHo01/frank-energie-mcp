@@ -56,9 +56,7 @@ async def test_month_summary_unavailable_and_invalid() -> None:
     """Preserve absence and reject nonfinite values."""
     client = AsyncMock()
     client.month_summary.return_value = None
-    assert await make_service(client).get_current_month_cost_summary() == {
-        "available": False
-    }
+    assert await make_service(client).get_current_month_cost_summary() == {"available": False}
     client.month_summary.return_value = SimpleNamespace(expectedCosts=float("inf"))
     with pytest.raises(ValueError, match="summary value"):
         await make_service(client).get_current_month_cost_summary()
