@@ -49,7 +49,7 @@ if __name__ == "__main__":
         print(f"NETWORK_ERROR: {type(exc).__name__}", file=sys.stderr)
         sys.exit(2)
     except (ValueError, KeyError, TypeError, AttributeError) as exc:
-        print(f"API_RESPONSE_ERROR: {type(exc).__name__}", file=sys.stderr)
+        print(f"API_RESPONSE_ERROR: {type(exc).__name__}: {exc}", file=sys.stderr)
         sys.exit(3)
     except Exception as exc:
         print(f"API_OR_LIBRARY_ERROR: {type(exc).__name__}", file=sys.stderr)
