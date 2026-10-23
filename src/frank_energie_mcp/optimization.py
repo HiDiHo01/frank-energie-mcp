@@ -27,9 +27,7 @@ def validated_series(
     step = {"PT15M": 900, "PT60M": 3600}[resolution]
     start = datetime(day.year, day.month, day.day, tzinfo=ZONE).astimezone(UTC)
     next_day = day + timedelta(days=1)
-    end = datetime(
-        next_day.year, next_day.month, next_day.day, tzinfo=ZONE
-    ).astimezone(UTC)
+    end = datetime(next_day.year, next_day.month, next_day.day, tzinfo=ZONE).astimezone(UTC)
     ordered = sorted(
         (
             datetime.fromisoformat(item["date_from"]).astimezone(UTC),
@@ -170,10 +168,13 @@ def split_periods(
 ) -> dict[str, Any]:
     """Choose cheapest nonoverlapping fixed blocks, without partial allocations."""
     step = {"PT15M": 15, "PT60M": 60}[resolution]
-    if any(
-        isinstance(value, bool) or not isinstance(value, int) or value <= 0 or value % step
-        for value in (total_minutes, minimum_block_minutes)
-    ) or total_minutes % minimum_block_minutes:
+    if (
+        any(
+            isinstance(value, bool) or not isinstance(value, int) or value <= 0 or value % step
+            for value in (total_minutes, minimum_block_minutes)
+        )
+        or total_minutes % minimum_block_minutes
+    ):
         raise ValueError("Durations must be positive resolution multiples and divisible.")
     blocks = windows(series, minimum_block_minutes, resolution)
     blocks.sort(key=lambda item: (item["average_total"], item["start"]))
@@ -250,9 +251,15 @@ def price_statistics(
     values = sorted(item[2] for item in series)
     if not values:
         return {
-            "count": 0, "mean": None, "median": None, "minimum": None,
-            "maximum": None, "range": None, "standard_deviation": None,
-            "p25": None, "p75": None,
+            "count": 0,
+            "mean": None,
+            "median": None,
+            "minimum": None,
+            "maximum": None,
+            "range": None,
+            "standard_deviation": None,
+            "p25": None,
+            "p75": None,
         }
     mean = sum(values) / len(values)
 
@@ -293,8 +300,7 @@ def price_volatility(
         "largest_increase": max(differences, default=None),
         "largest_decrease": min(differences, default=None),
         "mean_absolute_change": (
-            sum(abs(value) for value in differences) / len(differences)
-            if differences else None
+            sum(abs(value) for value in differences) / len(differences) if differences else None
         ),
     }
 
@@ -309,7 +315,5 @@ def price_trend(
         return {"direction": "insufficient_data", "change": None, "has_gaps": False}
     change = series[-1][2] - series[0][2]
     gaps = any(series[i - 1][1] != series[i][0] for i in range(1, len(series)))
-    direction = "stable" if abs(change) <= tolerance else (
-        "rising" if change > 0 else "falling"
-    )
+    direction = "stable" if abs(change) <= tolerance else ("rising" if change > 0 else "falling")
     return {"direction": direction, "change": change, "has_gaps": gaps}
