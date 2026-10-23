@@ -104,8 +104,12 @@ def energy_cost(
 ) -> dict[str, Any]:
     """Integrate constant electrical power over a fully covered window."""
     power = positive(power_kw, "power_kw")
-    options = windows(series, duration_minutes, resolution, start, start + timedelta(minutes=duration_minutes))
-    matching = next((item for item in options if datetime.fromisoformat(item["start"]) == start), None)
+    options = windows(
+        series, duration_minutes, resolution, start, start + timedelta(minutes=duration_minutes)
+    )
+    matching = next(
+        (item for item in options if datetime.fromisoformat(item["start"]) == start), None
+    )
     if matching is None:
         return {"status": "incomplete", "cost": None, "energy_kwh": None}
     energy = power * duration_minutes / 60
@@ -119,9 +123,17 @@ def threshold_periods(
     minimum_minutes: int,
 ) -> list[dict[str, Any]]:
     """Group adjacent qualifying price intervals without bridging gaps."""
-    if isinstance(threshold, bool) or not isinstance(threshold, (int, float)) or not isfinite(threshold):
+    if (
+        isinstance(threshold, bool)
+        or not isinstance(threshold, (int, float))
+        or not isfinite(threshold)
+    ):
         raise ValueError("threshold must be finite.")
-    if isinstance(minimum_minutes, bool) or not isinstance(minimum_minutes, int) or minimum_minutes <= 0:
+    if (
+        isinstance(minimum_minutes, bool)
+        or not isinstance(minimum_minutes, int)
+        or minimum_minutes <= 0
+    ):
         raise ValueError("minimum_minutes must be a positive integer.")
     groups: list[list[tuple[datetime, datetime, float]]] = []
     current: list[tuple[datetime, datetime, float]] = []
