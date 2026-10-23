@@ -110,6 +110,7 @@ async def test_server_registers_tools_resources_and_prompts(
         "get_smart_battery_trading_result",
         "get_smart_pv_financial_result",
         "get_monthly_usage_differences",
+        "get_smart_pv_operational_status",
         "get_account",
         "list_sites",
     }
