@@ -1087,11 +1087,7 @@ class FrankEnergieService:
         if summary is None:
             raise ValueError("Unexpected smart battery detail response.")
         result = getattr(summary, "total_result", None)
-        if (
-            isinstance(result, bool)
-            or not isinstance(result, (int, float))
-            or not isfinite(result)
-        ):
+        if isinstance(result, bool) or not isinstance(result, (int, float)) or not isfinite(result):
             raise ValueError("Unexpected smart battery trading result.")
         return {"available": True, "total_result": float(result)}
 
