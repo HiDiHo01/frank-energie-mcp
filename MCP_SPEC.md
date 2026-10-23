@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Thirty-three read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Thirty-four read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -47,6 +47,7 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_daily_consumption_statistics` | `get_daily_consumption_statistics(start_date, end_date)` | Authenticated daily kWh count, total and average over an inclusive range |
 | `get_smart_battery_session_statistics` | `get_smart_battery_session_statistics(device_id, start_date, end_date)` | Authenticated session count and aggregate trading results |
 | `get_period_usage_and_costs` | `get_period_usage_and_costs(start_date)` | Authenticated billing-period usage and cost totals by energy category |
+| `get_ev_charger_statistics` | `get_ev_charger_statistics(start_date)` | Authenticated EV charger reachability and smart charging counts |
 | `get_account` | `get_account()` | After a successful authenticated account request, returns only `{"authenticated": true}`; account details are deliberately not exposed |
 | `list_sites` | `list_sites()` | `{"count": N}` for a recognized site collection; site identifiers and addresses are not exposed |
 
@@ -320,6 +321,16 @@ Missing categories are null; missing periods return
 Nonfinite totals and invalid units are rejected. Raw period
 identifiers, individual usage items and customer data are omitted.
 No upstream write operation is invoked.
+
+## EV charger statistics contract
+
+`get_ev_charger_statistics(start_date)` requires credentials,
+a configured delivery-site reference, and an ISO calendar date.
+It returns nonnegative integer counts: `charger_count`,
+`reachable_count`, `smart_capable_count`, and
+`smart_enabled_count`. Invalid boolean capability fields
+are rejected. Device IDs, intervention records, and raw
+charging settings are excluded. No upstream mutation is called.
 
 ## Authentication and upstream access
 
