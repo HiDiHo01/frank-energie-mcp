@@ -339,26 +339,18 @@ def create_server(
     @server.tool()
     async def get_monthly_cost_insights(month: str) -> object:
         """Get upstream monthly expected and actual costs without customer metadata."""
-        return await safe_tool_call(
-            lambda: energy_service.get_monthly_cost_insights(month)
-        )
+        return await safe_tool_call(lambda: energy_service.get_monthly_cost_insights(month))
 
     @server.tool()
     async def get_period_usage_and_costs(start_date: date) -> object:
         """Read upstream period electricity, gas and feed-in usage and costs."""
-        return await safe_tool_call(
-            lambda: energy_service.get_period_usage_and_costs(start_date)
-        )
+        return await safe_tool_call(lambda: energy_service.get_period_usage_and_costs(start_date))
 
     @server.tool()
-    async def get_daily_consumption_statistics(
-        start_date: date, end_date: date
-    ) -> object:
+    async def get_daily_consumption_statistics(start_date: date, end_date: date) -> object:
         """Aggregate daily meter readings in an inclusive calendar-date range."""
         return await safe_tool_call(
-            lambda: energy_service.get_daily_consumption_statistics(
-                start_date, end_date
-            )
+            lambda: energy_service.get_daily_consumption_statistics(start_date, end_date)
         )
 
     @server.tool()
