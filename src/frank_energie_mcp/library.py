@@ -435,7 +435,8 @@ class FrankEnergieService:
         }
         for energy in ("electricity", "gas"):
             summaries: list[dict[str, Any]] = []
-            for intervals, requested_day in ((first[energy], first_day), (second[energy], second_day)):
+            daily_series = ((first[energy], first_day), (second[energy], second_day))
+            for intervals, requested_day in daily_series:
                 summary = _comparison_summary(intervals, requested_day)
                 cheapest = _extreme_period(
                     intervals, requested_day, period_minutes, step_minutes, highest=False
