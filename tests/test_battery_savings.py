@@ -57,7 +57,7 @@ async def test_battery_savings_finds_profitable_cycle_with_losses() -> None:
 @pytest.mark.asyncio
 async def test_battery_savings_incomplete_data_does_not_guess() -> None:
     service = _service([0.1, 0.8])
-    result = await service.calculate_battery_savings(1.0, 4.0, 4.0)
+    result = await service.calculate_battery_savings(1.0, 4.0, 4.0, day=date(2026, 6, 15))
     assert result["coverage_status"] == "incomplete"
     assert result["estimated_savings"] is None
     assert result["best_cycle"] is None
