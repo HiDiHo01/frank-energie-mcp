@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from json import dumps
 from math import isfinite
 from typing import Any
@@ -37,7 +37,7 @@ def normalize_interval(price: Any) -> dict[str, Any]:
     end = price.date_till
     if not isinstance(start, datetime) or not isinstance(end, datetime):
         raise ValueError("Invalid market-price timestamps.")
-    if start.tzinfo is None or end.tzinfo is None or end <= start:
+    if (\n        start.tzinfo is None\n        or end.tzinfo is None\n        or start.utcoffset() is None\n        or end.utcoffset() is None\n        or end.astimezone(timezone.utc) <= start.astimezone(timezone.utc)\n    ):
         raise ValueError("Market-price intervals must be ordered and timezone-aware.")
     total = price.total
     if isinstance(total, bool) or not isinstance(total, (int, float)) or not isfinite(total):
