@@ -40,3 +40,10 @@ jobs:
           FRANK_ENERGIE_PASSWORD: ""
           FRANK_ENERGIE_SITE_REFERENCE: ""
         run: python tests/live_current_prices.py
+
+      - name: Live anonymous MCP current electricity tariff smoke test
+        env:
+          FRANK_ENERGIE_USERNAME: ""
+          FRANK_ENERGIE_PASSWORD: ""
+          FRANK_ENERGIE_SITE_REFERENCE: ""
+        run: python tests/live_mcp_current_prices.py
