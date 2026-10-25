@@ -16,6 +16,11 @@ async def test_register_tools_populates_all_tools() -> None:
     tools = await server.list_tools()
     assert {tool.name for tool in tools} == {
         "get_account",
+        "get_average_prices",
+        "get_highest_period",
+        "get_highest_price",
+        "get_lowest_period",
+        "get_lowest_price",
         "get_current_prices",
         "get_gas_price",
         "get_today_prices",
