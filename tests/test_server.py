@@ -31,6 +31,7 @@ async def test_registers_fourteen_tools() -> None:
         "get_average_prices",
         "get_lowest_price",
         "get_highest_price",
+        "get_best_split_periods",
         "get_lowest_period",
         "get_highest_period",
         "get_best_start_time",
