@@ -29,16 +29,15 @@ async def run() -> None:
         args=["-m", "frank_energie_mcp"],
         env=env,
     )
-    async with stdio_client(params) as (read, write):
-        async with ClientSession(read, write) as session:
-            await asyncio.wait_for(session.initialize(), timeout=20)
-            listed = await asyncio.wait_for(session.list_tools(), timeout=20)
-            if "get_current_prices" not in {tool.name for tool in listed.tools}:
-                raise ValueError("Expected current-price MCP tool is missing.")
-            result = await asyncio.wait_for(
-                session.call_tool("get_current_prices", {"resolution": "PT15M"}),
-                timeout=50,
-            )
+    async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
+        await asyncio.wait_for(session.initialize(), timeout=20)
+        listed = await asyncio.wait_for(session.list_tools(), timeout=20)
+        if "get_current_prices" not in {tool.name for tool in listed.tools}:
+            raise ValueError("Expected current-price MCP tool is missing.")
+        result = await asyncio.wait_for(
+            session.call_tool("get_current_prices", {"resolution": "PT15M"}),
+            timeout=50,
+        )
     if result.isError:
         raise ValueError("MCP current-price tool returned an error.")
     if not result.content or not isinstance(result.content[0], TextContent):
