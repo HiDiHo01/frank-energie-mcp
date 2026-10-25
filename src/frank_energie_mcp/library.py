@@ -236,6 +236,54 @@ class FrankEnergieService:
             threshold=0.0, comparison="below", day=day, resolution=resolution
         )
 
+    async def get_price_trend(
+        self,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Classify the first-to-last total-price trend for each energy type."""
+        if resolution not in ("PT15M", "PT60M"):
+            raise ValueError("Unsupported price resolution.")
+        requested_day = day or datetime.now(ZoneInfo("Europe/Amsterdam")).date()
+        async with self.bridge.session() as client:
+            prices = await client.prices(requested_day, resolution=resolution)
+        normalized = normalize_market_prices(prices)
+        result: dict[str, Any] = {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+        }
+        for energy in ("electricity", "gas"):
+            intervals = sorted(normalized[energy], key=lambda entry: entry["date_from"])
+            coverage = _average_series(intervals, requested_day)
+            first = intervals[0] if intervals else None
+            last = intervals[-1] if intervals else None
+            change = (
+                last["total"] - first["total"]
+                if first is not None and last is not None
+                else None
+            )
+            direction = (
+                "unknown"
+                if change is None or len(intervals) < 2
+                else "rising"
+                if change > 0
+                else "falling"
+                if change < 0
+                else "stable"
+            )
+            result[energy] = {
+                "trend": direction,
+                "first_total": first["total"] if first is not None else None,
+                "last_total": last["total"] if last is not None else None,
+                "change_total": change if len(intervals) >= 2 else None,
+                "unit": first["per_unit"] if first is not None else None,
+                "interval_count": coverage["interval_count"],
+                "coverage_seconds": coverage["coverage_seconds"],
+                "expected_seconds": coverage["expected_seconds"],
+                "status": coverage["status"],
+            }
+        return result
+
     async def get_lowest_period(
         self,
         period_minutes: int,
