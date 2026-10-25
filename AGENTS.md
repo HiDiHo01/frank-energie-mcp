@@ -64,7 +64,6 @@ status in this guide; report them in the task or pull request instead.
 | `src/frank_energie_mcp/price_schemas.py` | Strict public price schemas, field allowlisting, validation, and JSON normalization. |
 | `src/frank_energie_mcp/tools/__init__.py` | Legacy import-compatible package; tools are registered in `server.py`. |
 | `src/frank_energie_mcp/models.py` | Legacy generic dataclasses; these are not the active price response contract. |
-| `src/frank_energie_mcp/resources/`, `prompts/` | Empty legacy packages; the resource and prompt are registered in `server.py`. |
 | `tests/test_*.py` | Mocked unit, service, schema, and MCP registration tests. |
 | `tests/live_*.py` | Separate anonymous network smoke tests. |
 | `.github/workflows/` | CI, formatting, typing, verification, and tag-triggered compile checks. |
