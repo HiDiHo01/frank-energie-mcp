@@ -852,10 +852,9 @@ def _statistics_series(intervals: list[dict[str, Any]], day: date) -> dict[str, 
     if not observations:
         return result
     mean = sum(value * duration for value, duration in observations) / total_seconds
-    squared_errors = [
-        duration * (value - mean) ** 2 for value, duration in observations
-    ]
-    weighted_squared_error = sum(squared_errors)
+    weighted_squared_error = 0.0
+    for value, duration in observations:
+        weighted_squared_error += duration * (value - mean) ** 2
     variance = weighted_squared_error / total_seconds
     ordered = sorted(observations)
 
