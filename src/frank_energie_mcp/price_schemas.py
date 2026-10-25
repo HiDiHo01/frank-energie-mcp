@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from json import dumps
 from math import isfinite
 from typing import Any
@@ -42,7 +42,7 @@ def normalize_interval(price: Any) -> dict[str, Any]:
         or end.tzinfo is None
         or start.utcoffset() is None
         or end.utcoffset() is None
-        or end.astimezone(timezone.utc) <= start.astimezone(timezone.utc)
+        or end.astimezone(UTC) <= start.astimezone(UTC)
     ):
         raise ValueError("Market-price intervals must be ordered and timezone-aware.")
     total = price.total
