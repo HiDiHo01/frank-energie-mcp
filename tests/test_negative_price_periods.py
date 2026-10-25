@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
 from types import SimpleNamespace
+from typing import Literal
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -14,12 +15,14 @@ from frank_energie_mcp.server import create_server
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("resolution", ["PT15M", "PT60M"])
-async def test_negative_price_periods_reuses_threshold_analysis(resolution: str) -> None:
+async def test_negative_price_periods_reuses_threshold_analysis(
+    resolution: Literal["PT15M", "PT60M"],
+) -> None:
     """Delegate to the existing strict negative-threshold implementation."""
     service = FrankEnergieService(FrankEnergieLibraryBridge(factory=AsyncMock))
     day = date(2026, 10, 25)
     with patch.object(
-        service,
+        FrankEnergieService,
         "get_price_threshold_periods",
         new_callable=AsyncMock,
     ) as threshold:
