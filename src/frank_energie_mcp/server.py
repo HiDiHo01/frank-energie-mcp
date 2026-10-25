@@ -185,6 +185,29 @@ def create_server(
         )
 
     @server.tool()
+    async def get_optimal_charging_schedule(
+        energy_kwh: float,
+        max_power_kw: float,
+        start: datetime,
+        deadline: datetime,
+        efficiency: float = 1.0,
+        allow_interruptions: bool = True,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Calculate the least-cost charging slots from published prices."""
+        return await safe_tool_call(
+            lambda: energy_service.get_optimal_charging_schedule(
+                energy_kwh=energy_kwh,
+                max_power_kw=max_power_kw,
+                start=start,
+                deadline=deadline,
+                efficiency=efficiency,
+                allow_interruptions=allow_interruptions,
+                resolution=resolution,
+            )
+        )
+
+    @server.tool()
     async def get_price_forecast_summary(
         day: date | None = None,
         resolution: PriceResolution = "PT15M",
