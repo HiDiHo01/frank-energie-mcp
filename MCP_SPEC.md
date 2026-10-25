@@ -251,4 +251,6 @@ The test suite covers service delegation, upstream call signatures, session clea
 
 ### `get_charging_deadline_analysis`
 
+Each deadline result also reports `required_grid_kwh`, `required_slot_count`, and `charging_duration_minutes`. Duration is null when no feasible published-price schedule exists; costs remain null when prices are insufficient.
+
 `get_charging_deadline_analysis(energy_kwh, max_power_kw, start, deadlines, efficiency=1.0, allow_interruptions=true, resolution="PT15M")` compares the existing fixed-power charging planner for 1–12 unique, timezone-aware deadlines, each within 48 hours of the start. Results preserve the caller's deadline order and include each deadline's status, estimated cost, schedule and extra cost versus the lowest available cost. If no deadline is feasible with published prices, the lowest cost and all differences are null. A missing-price schedule is not estimated. No charger commands are issued.
