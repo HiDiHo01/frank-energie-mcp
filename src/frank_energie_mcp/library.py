@@ -176,14 +176,13 @@ class FrankEnergieService:
         consumption_kwh: float | None = None,
     ) -> dict[str, Any]:
         """Find the cheapest electricity start time for a fixed-duration load."""
-        if consumption_kwh is not None:
-            if (
-                isinstance(consumption_kwh, bool)
-                or not isinstance(consumption_kwh, (int, float))
-                or not math.isfinite(consumption_kwh)
-                or consumption_kwh < 0
-            ):
-                raise ValueError("consumption_kwh must be a finite non-negative number.")
+        if consumption_kwh is not None and (
+            isinstance(consumption_kwh, bool)
+            or not isinstance(consumption_kwh, (int, float))
+            or not math.isfinite(consumption_kwh)
+            or consumption_kwh < 0
+        ):
+            raise ValueError("consumption_kwh must be a finite non-negative number.")
         result = await self.get_lowest_period(period_minutes, day, resolution)
         electricity = result["electricity"]
         period = electricity["period"]
