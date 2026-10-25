@@ -254,3 +254,7 @@ Use `get_price_forecast_summary(day="2026-06-15", resolution="PT15M", period_min
 ## Charging schedule
 
 Use `get_optimal_charging_schedule` to plan fixed-power charging from published electricity prices. Supply energy (kWh), maximum grid power (kW), timezone-aware start and deadline, efficiency, and whether charging may be interrupted. Missing price intervals never become synthetic estimates. This tool does not control chargers.
+
+## Compare charging strategies
+
+Use `compare_charging_strategies` to compare immediate, least-cost contiguous, and least-cost interruptible charging within a timezone-aware window. It reports estimated costs and savings versus immediate charging without inventing missing prices.
