@@ -402,6 +402,128 @@ class FrankEnergieService:
         result["estimated_savings"] = best_savings
         return result
 
+    async def get_optimal_charging_schedule(
+        self,
+        energy_kwh: float,
+        max_power_kw: float,
+        start: datetime,
+        deadline: datetime,
+        efficiency: float = 1.0,
+        allow_interruptions: bool = True,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Find the least-cost fixed-power charging slots from published prices."""
+        if resolution not in ("PT15M", "PT60M"):
+            raise ValueError("Unsupported price resolution.")
+        for name, value in (
+            ("energy_kwh", energy_kwh),
+            ("max_power_kw", max_power_kw),
+            ("efficiency", efficiency),
+        ):
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValueError(f"{name} must be a finite number.")
+            if not math.isfinite(value) or value <= 0:
+                raise ValueError(f"{name} must be a positive finite number.")
+        if efficiency > 1:
+            raise ValueError("efficiency must be at most 1.")
+        if not isinstance(allow_interruptions, bool):
+            raise ValueError("allow_interruptions must be a boolean.")
+        if start.tzinfo is None or deadline.tzinfo is None:
+            raise ValueError("start and deadline must be timezone-aware.")
+        begin = start.astimezone(UTC)
+        finish = deadline.astimezone(UTC)
+        if finish <= begin or finish - begin > timedelta(hours=48):
+            raise ValueError("Charging window must be positive and at most 48 hours.")
+        step_seconds = 900 if resolution == "PT15M" else 3600
+        slot_kwh = max_power_kw * step_seconds / 3600
+        required_grid_kwh = energy_kwh / efficiency
+        slots_needed = math.ceil(required_grid_kwh / slot_kwh - 1e-12)
+        local_zone = ZoneInfo("Europe/Amsterdam")
+        first_day = begin.astimezone(local_zone).date()
+        last_day = (finish - timedelta(microseconds=1)).astimezone(local_zone).date()
+        dates: list[date] = []
+        current_day = first_day
+        while current_day <= last_day:
+            dates.append(current_day)
+            current_day += timedelta(days=1)
+        intervals: list[dict[str, Any]] = []
+        async with self.bridge.session() as client:
+            for requested_day in dates:
+                prices = await client.prices(requested_day, resolution=resolution)
+                normalized = normalize_market_prices(prices)
+                electricity = normalized["electricity"]
+                _average_series(electricity, requested_day)
+                intervals.extend(electricity)
+        eligible: list[dict[str, Any]] = []
+        for entry in intervals:
+            slot_start = datetime.fromisoformat(entry["date_from"]).astimezone(UTC)
+            slot_end = datetime.fromisoformat(entry["date_till"]).astimezone(UTC)
+            if (
+                slot_start >= begin
+                and slot_end <= finish
+                and (slot_end - slot_start).total_seconds() == step_seconds
+            ):
+                eligible.append(entry)
+        ordered = sorted(eligible, key=lambda item: item["date_from"])
+        if allow_interruptions:
+            chosen = sorted(ordered, key=lambda item: (item["total"], item["date_from"]))
+            chosen = chosen[:slots_needed]
+        else:
+            candidates: list[list[dict[str, Any]]] = []
+            for index in range(len(ordered) - slots_needed + 1):
+                window = ordered[index : index + slots_needed]
+                times = [
+                    datetime.fromisoformat(item["date_from"]).astimezone(UTC)
+                    for item in window
+                ]
+                if all(
+                    times[offset + 1] - times[offset] == timedelta(seconds=step_seconds)
+                    for offset in range(len(times) - 1)
+                ):
+                    candidates.append(window)
+            chosen = min(
+                candidates,
+                key=lambda window: sum(item["total"] for item in window),
+                default=[],
+            )
+        if len(chosen) != slots_needed:
+            return {
+                "status": "insufficient_prices",
+                "resolution": resolution,
+                "required_grid_kwh": required_grid_kwh,
+                "available_slot_count": len(ordered),
+                "required_slot_count": slots_needed,
+                "schedule": [],
+                "estimated_cost": None,
+            }
+        chosen.sort(key=lambda item: item["date_from"])
+        remaining = required_grid_kwh
+        schedule: list[dict[str, Any]] = []
+        estimated_cost = 0.0
+        for item in chosen:
+            consumed = min(remaining, slot_kwh)
+            remaining -= consumed
+            cost = consumed * float(item["total"])
+            estimated_cost += cost
+            schedule.append(
+                {
+                    "start": item["date_from"],
+                    "end": item["date_till"],
+                    "grid_energy_kwh": consumed,
+                    "price_per_kwh": item["total"],
+                    "estimated_cost": cost,
+                }
+            )
+        return {
+            "status": "ok",
+            "resolution": resolution,
+            "required_grid_kwh": required_grid_kwh,
+            "available_slot_count": len(ordered),
+            "required_slot_count": slots_needed,
+            "schedule": schedule,
+            "estimated_cost": estimated_cost,
+        }
+
     async def get_price_forecast_summary(
         self,
         day: date | None = None,
