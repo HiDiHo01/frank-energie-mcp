@@ -448,11 +448,10 @@ class FrankEnergieService:
                     "schedule": plan["schedule"],
                 }
             )
-        available = [
-            float(item["estimated_cost"])
-            for item in results
-            if item["estimated_cost"] is not None
-        ]
+        available: list[float] = []
+        for item in results:
+            if item["estimated_cost"] is not None:
+                available.append(float(item["estimated_cost"]))
         cheapest = min(available) if available else None
         for item in results:
             cost = item["estimated_cost"]
