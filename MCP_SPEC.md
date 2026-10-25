@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Twenty-one read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Twenty-two read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -233,3 +233,7 @@ The test suite covers service delegation, upstream call signatures, session clea
 ### `get_price_statistics`
 
 `get_price_statistics(day=None, resolution="PT15M")` returns electricity and gas statistics over the **observed** intervals: duration-weighted mean, population variance, standard deviation, minimum, maximum, median and percentiles P10/P25/P75/P90. Percentiles use the **duration-weighted nearest-rank** method (first price where cumulative observed duration reaches the percentile); they are not interpolated. Counts of negative/zero intervals and their durations are included. Missing intervals are never imputed: `coverage_status`, `coverage_seconds`, `expected_seconds`, and `complete` expose completeness, including 23/25-hour Amsterdam DST days. Empty series have null numeric statistics. Price unit is the normalized upstream unit, and totals are all-in prices.
+
+### `get_price_forecast_summary`
+
+`get_price_forecast_summary(day=None, resolution="PT15M", period_minutes=60)` fetches public all-in electricity and gas prices for the requested Amsterdam calendar day (default: today) and its following day (tomorrow). For each energy type it returns the observed average, minimum, maximum, interval count, DST-aware coverage status and seconds, and cheapest/dearest **contiguous** windows of the requested duration. `average_difference` is tomorrow minus today and is null if either has no data. Missing tomorrow prices are marked empty, never predicted or filled. `period_minutes` must be a positive multiple of the selected resolution (15 or 60 minutes), up to 1500 minutes. Windows require uninterrupted, resolution-sized intervals; incomplete days remain marked incomplete.
