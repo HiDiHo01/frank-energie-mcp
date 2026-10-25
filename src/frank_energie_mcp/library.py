@@ -318,6 +318,90 @@ class FrankEnergieService:
             }
         return result
 
+    async def calculate_battery_savings(
+        self,
+        capacity_kwh: float,
+        charge_power_kw: float,
+        discharge_power_kw: float,
+        charge_efficiency: float = 0.95,
+        discharge_efficiency: float = 0.95,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Estimate the best single charge/discharge arbitrage cycle for one day."""
+        if resolution not in ("PT15M", "PT60M"):
+            raise ValueError("Unsupported price resolution.")
+        for name, value in (
+            ("capacity_kwh", capacity_kwh),
+            ("charge_power_kw", charge_power_kw),
+            ("discharge_power_kw", discharge_power_kw),
+            ("charge_efficiency", charge_efficiency),
+            ("discharge_efficiency", discharge_efficiency),
+        ):
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValueError(f"{name} must be a finite positive number.")
+            if not math.isfinite(value) or value <= 0:
+                raise ValueError(f"{name} must be a finite positive number.")
+        if charge_efficiency > 1 or discharge_efficiency > 1:
+            raise ValueError("Efficiencies cannot exceed 1.")
+        requested_day = day or datetime.now(ZoneInfo("Europe/Amsterdam")).date()
+        async with self.bridge.session() as client:
+            prices = await client.prices(requested_day, resolution=resolution)
+        normalized = normalize_market_prices(prices)
+        intervals = sorted(normalized["electricity"], key=lambda item: item["date_from"])
+        coverage = _average_series(intervals, requested_day)
+        result: dict[str, Any] = {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+            "capacity_kwh": capacity_kwh,
+            "coverage_status": coverage["status"],
+            "coverage_seconds": coverage["coverage_seconds"],
+            "expected_seconds": coverage["expected_seconds"],
+            "model": "single_interval_charge_then_discharge",
+            "best_cycle": None,
+            "estimated_savings": None,
+        }
+        if not coverage["complete"]:
+            return result
+        best_savings = 0.0
+        best_cycle: dict[str, Any] | None = None
+        for charge_index, charge in enumerate(intervals):
+            charge_hours = (
+                datetime.fromisoformat(charge["date_till"])
+                - datetime.fromisoformat(charge["date_from"])
+            ).total_seconds() / 3600
+            for discharge in intervals[charge_index + 1 :]:
+                discharge_hours = (
+                    datetime.fromisoformat(discharge["date_till"])
+                    - datetime.fromisoformat(discharge["date_from"])
+                ).total_seconds() / 3600
+                stored_kwh = min(
+                    capacity_kwh,
+                    charge_power_kw * charge_hours * charge_efficiency,
+                    discharge_power_kw * discharge_hours / discharge_efficiency,
+                )
+                input_kwh = stored_kwh / charge_efficiency
+                output_kwh = stored_kwh * discharge_efficiency
+                charge_cost = input_kwh * float(charge["total"])
+                avoided_cost = output_kwh * float(discharge["total"])
+                savings = avoided_cost - charge_cost
+                if savings > best_savings:
+                    best_savings = savings
+                    best_cycle = {
+                        "charge_start": charge["date_from"],
+                        "charge_end": charge["date_till"],
+                        "discharge_start": discharge["date_from"],
+                        "discharge_end": discharge["date_till"],
+                        "grid_input_kwh": input_kwh,
+                        "delivered_kwh": output_kwh,
+                        "charge_cost": charge_cost,
+                        "avoided_purchase_cost": avoided_cost,
+                        "estimated_savings": savings,
+                    }
+        result["best_cycle"] = best_cycle
+        result["estimated_savings"] = best_savings
+        return result
+
     async def get_price_volatility(
         self,
         day: date | None = None,
