@@ -265,3 +265,5 @@ Use `compare_charging_strategies` to compare immediate, least-cost contiguous, a
 ## Charging deadline analysis
 
 Use `get_charging_deadline_analysis` to compare the cost of charging before multiple deadlines. The tool reuses `get_optimal_charging_schedule`, reports a plan, required grid energy, required charging slots, occupied charging minutes (when a feasible published-price schedule exists), and the additional cost relative to the cheapest feasible deadline. It does not invent missing prices or control a charger.
+
+Use `get_charging_start_time_analysis` to compare up to twelve timezone-aware start times against a fixed deadline (within 48 hours). It reports feasible charging schedules, estimated costs, grid energy, charging duration, the cheapest start, and savings against the most expensive feasible start. Missing prices never produce invented costs.
