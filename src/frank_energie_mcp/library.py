@@ -206,6 +206,87 @@ class FrankEnergieService:
             "status": electricity["status"],
         }
 
+    async def calculate_energy_cost(
+        self,
+        start: datetime,
+        end: datetime,
+        consumption_kwh: float,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Estimate electricity cost for uniform consumption over a covered interval."""
+        if (
+            not isinstance(start, datetime)
+            or not isinstance(end, datetime)
+            or start.tzinfo is None
+            or end.tzinfo is None
+            or start.utcoffset() is None
+            or end.utcoffset() is None
+        ):
+            raise ValueError("start and end must be timezone-aware datetimes.")
+        start_utc = start.astimezone(UTC)
+        end_utc = end.astimezone(UTC)
+        if end_utc <= start_utc:
+            raise ValueError("end must be later than start.")
+        if (
+            isinstance(consumption_kwh, bool)
+            or not isinstance(consumption_kwh, (int, float))
+            or not math.isfinite(consumption_kwh)
+            or consumption_kwh < 0
+        ):
+            raise ValueError("consumption_kwh must be a finite non-negative number.")
+        if resolution not in ("PT15M", "PT60M"):
+            raise ValueError("Unsupported price resolution.")
+
+        local_tz = ZoneInfo("Europe/Amsterdam")
+        first_day = start_utc.astimezone(local_tz).date()
+        last_day = (end_utc - timedelta(microseconds=1)).astimezone(local_tz).date()
+        if last_day > first_day + timedelta(days=1):
+            raise ValueError("The requested period must span at most two Amsterdam dates.")
+
+        intervals: list[dict[str, Any]] = []
+        async with self.bridge.session() as client:
+            day = first_day
+            while day <= last_day:
+                prices = await client.prices(day, resolution=resolution)
+                intervals.extend(normalize_market_prices(prices)["electricity"])
+                day += timedelta(days=1)
+
+        # Each price must cover its complete resolution interval. Clipping is
+        # permitted only at the requested start/end boundaries.
+        step_seconds = {"PT15M": 900, "PT60M": 3600}[resolution]
+        ordered = sorted(intervals, key=lambda entry: entry["date_from"])
+        cursor = start_utc
+        weighted_total = 0.0
+        for entry in ordered:
+            price_start = datetime.fromisoformat(entry["date_from"]).astimezone(UTC)
+            price_end = datetime.fromisoformat(entry["date_till"]).astimezone(UTC)
+            if price_end <= start_utc or price_start >= end_utc:
+                continue
+            if (price_end - price_start).total_seconds() != step_seconds:
+                raise ValueError("Invalid price interval duration.")
+            clipped_start = max(price_start, start_utc)
+            clipped_end = min(price_end, end_utc)
+            if clipped_start != cursor:
+                raise ValueError("Electricity price coverage has gaps or overlaps.")
+            seconds = (clipped_end - clipped_start).total_seconds()
+            weighted_total += seconds * entry["total"]
+            cursor = clipped_end
+        if cursor != end_utc:
+            raise ValueError("Electricity prices do not cover the requested period.")
+
+        duration_seconds = (end_utc - start_utc).total_seconds()
+        average_total = weighted_total / duration_seconds
+        return {
+            "start": start.isoformat(),
+            "end": end.isoformat(),
+            "resolution": resolution,
+            "consumption_kwh": float(consumption_kwh),
+            "average_total": average_total,
+            "estimated_cost": average_total * consumption_kwh,
+            "unit": "kWh",
+            "duration_seconds": duration_seconds,
+        }
+
     async def get_highest_period(
         self,
         period_minutes: int,
