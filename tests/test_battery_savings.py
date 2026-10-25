@@ -87,7 +87,13 @@ async def test_battery_savings_rejects_invalid_inputs(kwargs: dict[str, float]) 
     options = {"capacity_kwh": 1.0, "charge_power_kw": 4.0, "discharge_power_kw": 4.0}
     options.update(kwargs)
     with pytest.raises(ValueError):
-        await _service([]).calculate_battery_savings(**options)
+        await _service([]).calculate_battery_savings(
+            capacity_kwh=options["capacity_kwh"],
+            charge_power_kw=options["charge_power_kw"],
+            discharge_power_kw=options["discharge_power_kw"],
+            charge_efficiency=options.get("charge_efficiency", 0.95),
+            discharge_efficiency=options.get("discharge_efficiency", 0.95),
+        )
 
 
 @pytest.mark.asyncio
