@@ -185,6 +185,29 @@ def create_server(
         )
 
     @server.tool()
+    async def get_charging_efficiency_analysis(
+        energy_kwh: float,
+        max_power_kw: float,
+        start: datetime,
+        deadline: datetime,
+        efficiencies: list[float],
+        allow_interruptions: bool = True,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Compare charging costs and grid losses for up to twelve efficiencies."""
+        return await safe_tool_call(
+            lambda: energy_service.get_charging_efficiency_analysis(
+                energy_kwh=energy_kwh,
+                max_power_kw=max_power_kw,
+                start=start,
+                deadline=deadline,
+                efficiencies=efficiencies,
+                allow_interruptions=allow_interruptions,
+                resolution=resolution,
+            )
+        )
+
+    @server.tool()
     async def get_charging_power_analysis(
         energy_kwh: float,
         power_levels_kw: list[float],
