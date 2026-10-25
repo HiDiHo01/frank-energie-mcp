@@ -472,10 +472,12 @@ class FrankEnergieService:
             candidates: list[list[dict[str, Any]]] = []
             for index in range(len(ordered) - slots_needed + 1):
                 window = ordered[index : index + slots_needed]
-                times = [
-                    datetime.fromisoformat(item["date_from"]).astimezone(UTC)
-                    for item in window
-                ]
+                times = list(
+                    map(
+                        lambda item: datetime.fromisoformat(item["date_from"]).astimezone(UTC),
+                        window,
+                    )
+                )
                 if all(
                     times[offset + 1] - times[offset] == timedelta(seconds=step_seconds)
                     for offset in range(len(times) - 1)
