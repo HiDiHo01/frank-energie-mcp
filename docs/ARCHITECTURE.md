@@ -1,4 +1,12 @@
-# Architecture
+# Architecture (historical design notes)
+
+> **Historical document — not the implemented architecture.** For the current
+> module layout, runtime behavior, and data flow, see
+> [../ARCHITECTURE.md](../ARCHITECTURE.md). For the public MCP contract, see
+> [../MCP_SPEC.md](../MCP_SPEC.md).
+>
+> The module suggestions and initial scope below are retained as design history,
+> not instructions to recreate removed packages or duplicate active code.
 
 ## Overview
 
