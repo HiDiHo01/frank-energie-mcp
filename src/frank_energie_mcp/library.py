@@ -207,9 +207,10 @@ class FrankEnergieService:
                         groups.append(_threshold_period(current))
                         current = []
                     continue
-                if current and datetime.fromisoformat(current[-1]["date_till"]).astimezone(
-                    UTC
-                ) != start:
+                if (
+                    current
+                    and datetime.fromisoformat(current[-1]["date_till"]).astimezone(UTC) != start
+                ):
                     groups.append(_threshold_period(current))
                     current = []
                 current.append(entry)
