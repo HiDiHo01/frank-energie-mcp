@@ -172,6 +172,23 @@ def create_server(
         )
 
     @server.tool()
+    async def get_best_split_periods(
+        total_duration_minutes: int,
+        block_duration_minutes: int,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Find the cheapest non-overlapping fixed-duration blocks in a day."""
+        return await safe_tool_call(
+            lambda: energy_service.get_best_split_periods(
+                total_duration_minutes=total_duration_minutes,
+                block_duration_minutes=block_duration_minutes,
+                day=day,
+                resolution=resolution,
+            )
+        )
+
+    @server.tool()
     async def get_lowest_period(
         period_minutes: int,
         day: date | None = None,
