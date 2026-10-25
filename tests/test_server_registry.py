@@ -16,6 +16,7 @@ async def test_register_tools_populates_all_tools() -> None:
     tools = await server.list_tools()
     assert {tool.name for tool in tools} == {
         "get_account",
+        "compare_days",
         "get_average_prices",
         "get_highest_period",
         "get_best_start_time",
