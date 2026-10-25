@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import os
 from collections.abc import Awaitable, Callable
-from datetime import date
+from datetime import date, datetime
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
@@ -140,6 +140,23 @@ def create_server(
                 day=day,
                 resolution=resolution,
                 consumption_kwh=consumption_kwh,
+            )
+        )
+
+    @server.tool()
+    async def calculate_energy_cost(
+        start: datetime,
+        end: datetime,
+        consumption_kwh: float,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Estimate electricity cost over a fully priced time range."""
+        return await safe_tool_call(
+            lambda: energy_service.calculate_energy_cost(
+                start=start,
+                end=end,
+                consumption_kwh=consumption_kwh,
+                resolution=resolution,
             )
         )
 
