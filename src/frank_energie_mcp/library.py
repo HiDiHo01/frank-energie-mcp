@@ -402,6 +402,68 @@ class FrankEnergieService:
         result["estimated_savings"] = best_savings
         return result
 
+    async def get_price_forecast_summary(
+        self,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+        period_minutes: int = 60,
+    ) -> dict[str, Any]:
+        """Compare observed prices on consecutive local days without extrapolation."""
+        if resolution not in ("PT15M", "PT60M"):
+            raise ValueError("Unsupported price resolution.")
+        step_minutes = 15 if resolution == "PT15M" else 60
+        if (
+            isinstance(period_minutes, bool)
+            or not isinstance(period_minutes, int)
+            or period_minutes < step_minutes
+            or period_minutes % step_minutes != 0
+            or period_minutes > 1500
+        ):
+            raise ValueError("period_minutes must be a positive multiple of resolution.")
+        first_day = day or datetime.now(ZoneInfo("Europe/Amsterdam")).date()
+        second_day = first_day + timedelta(days=1)
+        async with self.bridge.session() as client:
+            first_prices = await client.prices(first_day, resolution=resolution)
+            second_prices = await client.prices(second_day, resolution=resolution)
+        first = normalize_market_prices(first_prices)
+        second = normalize_market_prices(second_prices)
+        result: dict[str, Any] = {
+            "today": first_day.isoformat(),
+            "tomorrow": second_day.isoformat(),
+            "resolution": resolution,
+            "period_minutes": period_minutes,
+        }
+        for energy in ("electricity", "gas"):
+            summaries: list[dict[str, Any]] = []
+            for intervals, requested_day in ((first[energy], first_day), (second[energy], second_day)):
+                summary = _comparison_summary(intervals, requested_day)
+                cheapest = _extreme_period(
+                    intervals, requested_day, period_minutes, step_minutes, highest=False
+                )
+                dearest = _extreme_period(
+                    intervals, requested_day, period_minutes, step_minutes, highest=True
+                )
+                summaries.append(
+                    {
+                        **summary,
+                        "cheapest_period": cheapest["period"],
+                        "dearest_period": dearest["period"],
+                    }
+                )
+            today_summary, tomorrow_summary = summaries
+            today_average = today_summary["average_total"]
+            tomorrow_average = tomorrow_summary["average_total"]
+            result[energy] = {
+                "today": today_summary,
+                "tomorrow": tomorrow_summary,
+                "average_difference": (
+                    tomorrow_average - today_average
+                    if today_average is not None and tomorrow_average is not None
+                    else None
+                ),
+            }
+        return result
+
     async def get_price_statistics(
         self,
         day: date | None = None,
