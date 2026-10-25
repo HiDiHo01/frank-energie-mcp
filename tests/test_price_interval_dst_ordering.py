@@ -51,3 +51,11 @@ def test_price_interval_rejects_reverse_order_across_different_offsets() -> None
     end = datetime(2026, 3, 29, 0, 45, tzinfo=UTC)
     with pytest.raises(ValueError, match="ordered"):
         normalize_interval(SimpleNamespace(date_from=start, date_till=end, total=0.2))
+
+
+def test_price_interval_rejects_equal_instants_with_different_offsets() -> None:
+    """Distinct wall-clock values may represent the same UTC instant."""
+    start = datetime(2026, 10, 25, 2, 30, tzinfo=timezone(timedelta(hours=2)))
+    end = datetime(2026, 10, 25, 1, 30, tzinfo=timezone(timedelta(hours=1)))
+    with pytest.raises(ValueError, match="ordered"):
+        normalize_interval(SimpleNamespace(date_from=start, date_till=end, total=0.2))
