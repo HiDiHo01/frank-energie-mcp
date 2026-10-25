@@ -36,7 +36,7 @@ FastMCP handlers -> minimal AccountResponse / SitesResponse
 | Module | Responsibility |
 | --- | --- |
 | `__main__.py` | Invokes `server.main()` |
-| `server.py` | FastMCP creation, twelve tool registrations, resource, prompt, safe tool error handling, transport configuration, and minimal account/site responses |
+| `server.py` | FastMCP creation, thirteen tool registrations, resource, prompt, safe tool error handling, transport configuration, and minimal account/site responses |
 | `library.py` | `FrankEnergieService`, typed upstream protocol, managed `FrankEnergieLibraryBridge`, environment configuration, and active-interval selection |
 | `price_schemas.py` | Strict Pydantic price models, explicit field whitelisting, timestamp/amount validation, JSON normalization, and array bounds |
 | `tools/__init__.py` | Legacy package retained for import compatibility; tool implementations now live in `server.py` |
@@ -48,7 +48,7 @@ The unused `auth.py` and `config.py` placeholders were removed; authentication a
 
 ### MCP layer
 
-- Expose twelve asynchronous read-only tools, one static resource, and one static prompt.
+- Expose thirteen asynchronous read-only tools, one static resource, and one static prompt.
 - Validate `resolution` as `PT15M` or `PT60M` at the tool boundary.
 - Use `Europe/Amsterdam` dates for today/tomorrow and optional-date statistical price requests.
 - Select upstream `current_hour` records for current electricity/gas prices.
