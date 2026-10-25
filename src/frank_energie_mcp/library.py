@@ -257,11 +257,7 @@ class FrankEnergieService:
             coverage = _average_series(intervals, requested_day)
             first = intervals[0] if intervals else None
             last = intervals[-1] if intervals else None
-            change = (
-                last["total"] - first["total"]
-                if first is not None and last is not None
-                else None
-            )
+            change = last["total"] - first["total"] if first and last else None
             direction = (
                 "unknown"
                 if change is None or len(intervals) < 2
@@ -276,7 +272,7 @@ class FrankEnergieService:
                 "first_total": first["total"] if first is not None else None,
                 "last_total": last["total"] if last is not None else None,
                 "change_total": change if len(intervals) >= 2 else None,
-                "unit": first["per_unit"] if first is not None else None,
+                "unit": first["unit"] if first is not None else None,
                 "interval_count": coverage["interval_count"],
                 "coverage_seconds": coverage["coverage_seconds"],
                 "expected_seconds": coverage["expected_seconds"],
