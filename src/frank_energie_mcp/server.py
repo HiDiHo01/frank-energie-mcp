@@ -88,6 +88,19 @@ def create_server(
         )
 
     @server.tool()
+    async def compare_days(
+        first_day: date,
+        second_day: date,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Compare daily electricity and gas all-in price statistics."""
+        return await safe_tool_call(
+            lambda: energy_service.compare_days(
+                first_day=first_day, second_day=second_day, resolution=resolution
+            )
+        )
+
+    @server.tool()
     async def get_average_prices(
         day: date | None = None, resolution: PriceResolution = "PT15M"
     ) -> object:
