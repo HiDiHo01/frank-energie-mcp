@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Nineteen read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Twenty read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -25,6 +25,7 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_highest_price` | `get_highest_price(day, resolution)` | Maximum total interval for each energy type, with coverage metadata. |
 | `get_best_split_periods` | `get_best_split_periods(total_duration_minutes, block_duration_minutes, day, resolution)` | Lowest-cost non-overlapping fixed-length blocks for electricity and gas, including coverage status and price metrics. |
 | `get_lowest_period` | `get_lowest_period(period_minutes, day, resolution)` | Cheapest uninterrupted fixed-duration window for electricity and gas, selected by arithmetic mean of normalized `total`. |
+| `calculate_battery_savings` | `calculate_battery_savings(capacity_kwh, charge_power_kw, discharge_power_kw, charge_efficiency, discharge_efficiency, day, resolution)` | Best estimated one-charge-interval/one-discharge-interval self-consumption arbitrage cycle, or null for incomplete coverage. |
 | `get_price_volatility` | `get_price_volatility(day, resolution)` | Per-energy all-in price spread, population standard deviation, and mean absolute change across only contiguous intervals, with coverage metadata. |
 | `get_price_trend` | `get_price_trend(day, resolution)` | Per-energy first-to-last normalized total-price change, rising/falling/stable/unknown direction, and daily coverage metadata. |
 | `get_negative_price_periods` | `get_negative_price_periods(day, resolution)` | Convenience wrapper for strict negative total-price intervals, returning the threshold-period response for electricity and gas. |
@@ -226,3 +227,5 @@ The test suite covers service delegation, upstream call signatures, session clea
 `compare_days` reports the second day's price minus the first day's price. Percentage changes use the absolute value of the first day's price as denominator; they are null when the baseline is zero or either day has no observations. Each day is validated independently for gaps, overlaps and DST-aware calendar boundaries. Incomplete coverage is flagged, not filled.
 
 `get_best_split_periods` selects globally cheapest non-overlapping blocks of a fixed length; block and total durations must be positive resolution multiples, with total divisible by block duration. It excludes missing intervals and does not fabricate prices. `total_cost_per_unit` is the sum of each selected block's average total price multiplied by its duration in hours (cost for a constant load of one energy unit per hour); it is not a household cost estimate. Selection is null if the requested schedule cannot be fulfilled.
+
+`calculate_battery_savings` is a conservative **single-cycle, single-interval charge then single-interval discharge** estimate, not a full battery dispatch optimization. It assumes an initially empty battery, sufficient consumption during discharge to avoid retail purchases, no export remuneration, no fixed charges, no battery degradation cost, and no carryover across days. Both efficiency parameters must be in (0, 1]. Only complete local-day price coverage produces a numerical savings estimate; zero means no profitable cycle. Negative all-in prices are supported. All-in price units are currency per kWh, and the estimate is in the corresponding currency.
