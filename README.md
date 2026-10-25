@@ -242,3 +242,7 @@ Call `get_best_split_periods(total_duration_minutes=240, block_duration_minutes=
 ## Battery savings (single-cycle estimate)
 
 Use `calculate_battery_savings(capacity_kwh=1, charge_power_kw=4, discharge_power_kw=4, charge_efficiency=0.95, discharge_efficiency=0.95)` to estimate a profitable charge-then-discharge cycle using public all-in electricity prices. This is **not** a multi-interval battery scheduling model: each phase fits within one price interval. The calculation assumes enough local demand to use discharged energy, excludes export payments and battery wear, and returns no estimate when daily prices are incomplete.
+
+## Daily price statistics
+
+Use `get_price_statistics(day="2026-06-15", resolution="PT15M")` for duration-weighted mean, median, percentiles, population variance, standard deviation, extrema, negative/zero counts and coverage for electricity and gas. Percentiles use duration-weighted nearest rank; incomplete days are marked rather than filled with invented prices.
