@@ -201,9 +201,7 @@ class FrankEnergieService:
             "electricity": _extreme_period(
                 normalized["electricity"], requested_day, period_minutes, step, highest
             ),
-            "gas": _extreme_period(
-                normalized["gas"], requested_day, period_minutes, step, highest
-            ),
+            "gas": _extreme_period(normalized["gas"], requested_day, period_minutes, step, highest),
         }
 
     async def get_tomorrow_prices(self, resolution: PriceResolution = "PT15M") -> Any:
