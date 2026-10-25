@@ -660,13 +660,14 @@ def _best_split_series(
     if best is not None:
         for index in sorted(best[1], key=lambda item: candidates[item][0]):
             start, end, average, group = candidates[index]
-            blocks.append({
+            block = {
                 "start": group[0]["date_from"],
                 "end": group[-1]["date_till"],
                 "duration_minutes": block_minutes,
                 "average_total": average,
                 "unit": group[0]["unit"],
-            })
+            }
+            blocks.append(block)
     return {
         "blocks": blocks,
         "total_duration_minutes": total_minutes if best is not None else None,
