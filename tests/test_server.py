@@ -18,8 +18,8 @@ def test_server_name() -> None:
 
 
 @pytest.mark.asyncio
-async def test_registers_fourteen_tools() -> None:
-    """Expose all thirteen documented tools."""
+async def test_registers_all_documented_tools() -> None:
+    """Register the complete documented set of 29 MCP tools."""
     server = create_server(AsyncMock())
     tools = await server.list_tools()
     assert {tool.name for tool in tools} == {
