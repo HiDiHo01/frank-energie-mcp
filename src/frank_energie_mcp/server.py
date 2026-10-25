@@ -6,6 +6,7 @@ import logging
 import os
 from collections.abc import Awaitable, Callable
 from datetime import date, datetime
+from typing import Literal
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
@@ -111,6 +112,20 @@ def create_server(
         """Get the highest available total-price interval for electricity and gas."""
         return await safe_tool_call(
             lambda: energy_service.get_highest_price(day=day, resolution=resolution)
+        )
+
+    @server.tool()
+    async def get_price_threshold_periods(
+        threshold: float,
+        comparison: Literal["below", "above"] = "below",
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Find contiguous electricity and gas periods below or above a price threshold."""
+        return await safe_tool_call(
+            lambda: energy_service.get_price_threshold_periods(
+                threshold=threshold, comparison=comparison, day=day, resolution=resolution
+            )
         )
 
     @server.tool()
