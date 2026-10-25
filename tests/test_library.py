@@ -81,6 +81,7 @@ async def test_server_registers_tools_resources_and_prompts(
         "get_best_start_time",
         "calculate_energy_cost",
         "get_price_threshold_periods",
+        "get_negative_price_periods",
         "get_account",
         "list_sites",
     }

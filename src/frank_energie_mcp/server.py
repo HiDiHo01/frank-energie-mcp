@@ -129,6 +129,16 @@ def create_server(
         )
 
     @server.tool()
+    async def get_negative_price_periods(
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Find contiguous periods with strictly negative total energy prices."""
+        return await safe_tool_call(
+            lambda: energy_service.get_negative_price_periods(day=day, resolution=resolution)
+        )
+
+    @server.tool()
     async def get_lowest_period(
         period_minutes: int,
         day: date | None = None,
