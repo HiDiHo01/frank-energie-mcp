@@ -250,3 +250,7 @@ Use `get_price_statistics(day="2026-06-15", resolution="PT15M")` for duration-we
 ## Today and tomorrow summary
 
 Use `get_price_forecast_summary(day="2026-06-15", resolution="PT15M", period_minutes=60)` to compare observed all-in prices and cheapest/dearest contiguous windows for two consecutive local dates. The tool does not predict unpublished prices; it reports missing intervals and incomplete coverage explicitly.
+
+## Charging schedule
+
+Use `get_optimal_charging_schedule` to plan fixed-power charging from published electricity prices. Supply energy (kWh), maximum grid power (kW), timezone-aware start and deadline, efficiency, and whether charging may be interrupted. Missing price intervals never become synthetic estimates. This tool does not control chargers.
