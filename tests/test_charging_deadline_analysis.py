@@ -48,6 +48,11 @@ async def test_deadlines_compare_costs_without_inventing_prices() -> None:
     assert costs == pytest.approx([0.8, -0.1])
     assert result["lowest_estimated_cost"] == pytest.approx(-0.1)
     assert result["deadlines"][0]["additional_cost_vs_cheapest"] == pytest.approx(0.9)
+    assert [item["charging_duration_minutes"] for item in result["deadlines"]] == [
+        120,
+        120,
+    ]
+    assert [item["required_slot_count"] for item in result["deadlines"]] == [2, 2]
 
 
 @pytest.mark.asyncio
@@ -64,6 +69,7 @@ async def test_missing_prices_do_not_invent_savings() -> None:
     assert result["lowest_estimated_cost"] is None
     assert result["deadlines"][0]["status"] == "insufficient_prices"
     assert result["deadlines"][0]["additional_cost_vs_cheapest"] is None
+    assert result["deadlines"][0]["charging_duration_minutes"] is None
 
 
 @pytest.mark.asyncio
