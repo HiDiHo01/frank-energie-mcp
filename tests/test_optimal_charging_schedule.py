@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -82,9 +82,7 @@ async def test_incomplete_prices_are_not_filled() -> None:
     ("energy", "power", "efficiency"),
     [(0, 1, 1), (1, 0, 1), (1, 1, 0), (1, 1, 1.1), (float("nan"), 1, 1)],
 )
-async def test_rejects_invalid_inputs(
-    energy: float, power: float, efficiency: float
-) -> None:
+async def test_rejects_invalid_inputs(energy: float, power: float, efficiency: float) -> None:
     service = _service([])
     with pytest.raises(ValueError):
         await service.get_optimal_charging_schedule(
