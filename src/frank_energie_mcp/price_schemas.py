@@ -37,7 +37,13 @@ def normalize_interval(price: Any) -> dict[str, Any]:
     end = price.date_till
     if not isinstance(start, datetime) or not isinstance(end, datetime):
         raise ValueError("Invalid market-price timestamps.")
-    if (\n        start.tzinfo is None\n        or end.tzinfo is None\n        or start.utcoffset() is None\n        or end.utcoffset() is None\n        or end.astimezone(timezone.utc) <= start.astimezone(timezone.utc)\n    ):
+    if (
+        start.tzinfo is None
+        or end.tzinfo is None
+        or start.utcoffset() is None
+        or end.utcoffset() is None
+        or end.astimezone(timezone.utc) <= start.astimezone(timezone.utc)
+    ):
         raise ValueError("Market-price intervals must be ordered and timezone-aware.")
     total = price.total
     if isinstance(total, bool) or not isinstance(total, (int, float)) or not isfinite(total):
