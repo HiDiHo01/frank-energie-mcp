@@ -118,6 +118,48 @@ class FrankEnergieService:
             "gas": _average_series(normalized["gas"], requested_day),
         }
 
+    async def compare_days(
+        self,
+        first_day: date,
+        second_day: date,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Compare observed all-in prices on two Amsterdam calendar days."""
+        if resolution not in ("PT15M", "PT60M"):
+            raise ValueError("Unsupported price resolution.")
+        async with self.bridge.session() as client:
+            first_prices = await client.prices(first_day, resolution=resolution)
+            second_prices = await client.prices(second_day, resolution=resolution)
+        first = normalize_market_prices(first_prices)
+        second = normalize_market_prices(second_prices)
+        result: dict[str, Any] = {
+            "first_day": first_day.isoformat(),
+            "second_day": second_day.isoformat(),
+            "resolution": resolution,
+        }
+        for energy in ("electricity", "gas"):
+            left = _comparison_summary(first[energy], first_day)
+            right = _comparison_summary(second[energy], second_day)
+            differences: dict[str, Any] = {}
+            for metric in ("average_total", "minimum_total", "maximum_total"):
+                before = left[metric]
+                after = right[metric]
+                change = after - before if before is not None and after is not None else None
+                differences[metric] = {
+                    "absolute": change,
+                    "percent": (
+                        change / abs(before) * 100
+                        if change is not None and before != 0
+                        else None
+                    ),
+                }
+            result[energy] = {
+                "first": left,
+                "second": right,
+                "differences": differences,
+            }
+        return result
+
     async def get_lowest_price(
         self, day: date | None = None, resolution: PriceResolution = "PT15M"
     ) -> dict[str, Any]:
@@ -537,6 +579,18 @@ def _threshold_period(intervals: list[dict[str, Any]]) -> dict[str, Any]:
         "interval_count": len(intervals),
         "average_total": sum(item["total"] for item in intervals) / len(intervals),
         "unit": intervals[0]["unit"],
+    }
+
+
+def _comparison_summary(intervals: list[dict[str, Any]], day: date) -> dict[str, Any]:
+    """Reuse validated DST-aware coverage for a day's observed price extremes."""
+    coverage = _average_series(intervals, day)
+    totals = [float(interval["total"]) for interval in intervals]
+    return {
+        **coverage,
+        "minimum_total": min(totals) if totals else None,
+        "maximum_total": max(totals) if totals else None,
+        "unit": intervals[0]["unit"] if intervals else None,
     }
 
 
