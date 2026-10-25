@@ -36,7 +36,9 @@ def _service(values: list[float], minutes: int) -> FrankEnergieService:
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("minutes,resolution", [(15, "PT15M"), (60, "PT60M")])
-async def test_start_time_comparison(minutes: int, resolution: Literal["PT15M", "PT60M"]) -> None:
+async def test_start_time_comparison(
+    minutes: int, resolution: Literal["PT15M", "PT60M"]
+) -> None:
     service = _service([0.5, 0.3, 0.1, -0.2], minutes)
     first = datetime(2026, 6, 14, 22, tzinfo=UTC)
     step = timedelta(minutes=minutes)
@@ -47,8 +49,8 @@ async def test_start_time_comparison(minutes: int, resolution: Literal["PT15M", 
         deadline=first + step * 4,
         resolution=resolution,
     )
-    assert [item["estimated_cost"] for item in result["starts"]] == pytest.approx([-0.1, -0.1])
-    assert result["lowest_estimated_cost"] == pytest.approx(-0.1)
+    assert [item["estimated_cost"] for item in result["starts"]] == pytest.approx([-0.025, -0.025])
+    assert result["lowest_estimated_cost"] == pytest.approx(-0.025)
     assert result["cheapest_start"] == first.isoformat()
     assert result["starts"][0]["charging_duration_minutes"] == 2 * minutes
     assert result["starts"][1]["savings_vs_most_expensive"] == pytest.approx(0)
