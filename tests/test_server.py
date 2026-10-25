@@ -18,7 +18,7 @@ def test_server_name() -> None:
 
 
 @pytest.mark.asyncio
-async def test_registers_thirteen_tools() -> None:
+async def test_registers_fourteen_tools() -> None:
     """Expose all thirteen documented tools."""
     server = create_server(AsyncMock())
     tools = await server.list_tools()
@@ -34,6 +34,7 @@ async def test_registers_thirteen_tools() -> None:
         "get_highest_period",
         "get_best_start_time",
         "calculate_energy_cost",
+        "get_price_threshold_periods",
         "get_account",
         "list_sites",
     }
