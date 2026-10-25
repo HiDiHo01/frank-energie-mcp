@@ -127,6 +127,23 @@ def create_server(
         )
 
     @server.tool()
+    async def get_best_start_time(
+        period_minutes: int,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+        consumption_kwh: float | None = None,
+    ) -> object:
+        """Find the cheapest electricity start time and optional estimated cost."""
+        return await safe_tool_call(
+            lambda: energy_service.get_best_start_time(
+                period_minutes=period_minutes,
+                day=day,
+                resolution=resolution,
+                consumption_kwh=consumption_kwh,
+            )
+        )
+
+    @server.tool()
     async def get_highest_period(
         period_minutes: int,
         day: date | None = None,
@@ -166,7 +183,7 @@ def create_server(
             "Read-only Frank Energie market prices are available through "
             "get_current_prices, get_today_prices, get_tomorrow_prices, "
             "get_average_prices, get_lowest_price, get_highest_price, "
-            "get_lowest_period, get_highest_period, and get_gas_price. "
+            "get_lowest_period, get_highest_period, get_best_start_time, and get_gas_price. "
             "Account access requires authentication."
         )
 
