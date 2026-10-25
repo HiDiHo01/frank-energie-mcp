@@ -78,6 +78,7 @@ async def test_server_registers_tools_resources_and_prompts(
         "get_highest_price",
         "get_lowest_period",
         "get_highest_period",
+        "get_best_start_time",
         "get_account",
         "list_sites",
     }
