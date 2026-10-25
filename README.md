@@ -234,3 +234,7 @@ Use `get_price_volatility(day=None, resolution="PT15M")` for per-energy all-in p
 ## Compare calendar days
 
 Use `compare_days(first_day, second_day, resolution="PT15M")` to compare observed average, minimum and maximum normalized all-in electricity and gas prices. Absolute and percentage differences are relative to the first day; percentages are null for a zero baseline. Both days retain separate DST-aware coverage and completeness metadata.
+
+## Cheapest split periods
+
+Call `get_best_split_periods(total_duration_minutes=240, block_duration_minutes=60, day=..., resolution="PT15M")` to find the globally cheapest non-overlapping blocks, which need not be adjacent. Results include block times, mean all-in prices, availability and DST-aware coverage. The reported `total_cost_per_unit` assumes a constant load of one unit per hour; actual appliance costs depend on consumption.
