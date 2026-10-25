@@ -47,3 +47,10 @@ jobs:
           FRANK_ENERGIE_PASSWORD: ""
           FRANK_ENERGIE_SITE_REFERENCE: ""
         run: python tests/live_mcp_current_prices.py
+
+      - name: Live MCP protocol stdio integration smoke test
+        env:
+          FRANK_ENERGIE_USERNAME: ""
+          FRANK_ENERGIE_PASSWORD: ""
+          FRANK_ENERGIE_SITE_REFERENCE: ""
+        run: python tests/live_mcp_protocol.py
