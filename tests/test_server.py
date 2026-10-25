@@ -40,6 +40,7 @@ async def test_registers_fourteen_tools() -> None:
         "get_negative_price_periods",
         "get_price_trend",
         "calculate_battery_savings",
+        "compare_charging_strategies",
         "get_optimal_charging_schedule",
         "get_price_forecast_summary",
         "get_price_statistics",
