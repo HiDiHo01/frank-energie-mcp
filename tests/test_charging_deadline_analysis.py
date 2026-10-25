@@ -44,9 +44,8 @@ async def test_deadlines_compare_costs_without_inventing_prices() -> None:
         deadlines=[first + timedelta(hours=2), first + timedelta(hours=4)],
         resolution="PT60M",
     )
-    assert [item["estimated_cost"] for item in result["deadlines"]] == pytest.approx(
-        [0.8, -0.1]
-    )
+    costs = [item["estimated_cost"] for item in result["deadlines"]]
+    assert costs == pytest.approx([0.8, -0.1])
     assert result["lowest_estimated_cost"] == pytest.approx(-0.1)
     assert result["deadlines"][0]["additional_cost_vs_cheapest"] == pytest.approx(0.9)
 
