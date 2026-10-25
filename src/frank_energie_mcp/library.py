@@ -367,6 +367,52 @@ class FrankEnergieService:
             }
         return result
 
+    async def get_best_split_periods(
+        self,
+        total_duration_minutes: int,
+        block_duration_minutes: int,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Choose the cheapest non-overlapping fixed-length blocks within a local day."""
+        if resolution not in ("PT15M", "PT60M"):
+            raise ValueError("Unsupported price resolution.")
+        step = 15 if resolution == "PT15M" else 60
+        for name, value in (
+            ("total_duration_minutes", total_duration_minutes),
+            ("block_duration_minutes", block_duration_minutes),
+        ):
+            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+                raise ValueError(f"{name} must be a positive integer.")
+            if value % step:
+                raise ValueError(f"{name} must be a multiple of the resolution.")
+        if total_duration_minutes % block_duration_minutes:
+            raise ValueError("Total duration must be a multiple of block duration.")
+        requested_day = day or datetime.now(ZoneInfo("Europe/Amsterdam")).date()
+        async with self.bridge.session() as client:
+            prices = await client.prices(requested_day, resolution=resolution)
+        normalized = normalize_market_prices(prices)
+        return {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+            "total_duration_minutes": total_duration_minutes,
+            "block_duration_minutes": block_duration_minutes,
+            "electricity": _best_split_series(
+                normalized["electricity"],
+                requested_day,
+                total_duration_minutes,
+                block_duration_minutes,
+                step,
+            ),
+            "gas": _best_split_series(
+                normalized["gas"],
+                requested_day,
+                total_duration_minutes,
+                block_duration_minutes,
+                step,
+            ),
+        }
+
     async def get_lowest_period(
         self,
         period_minutes: int,
@@ -562,6 +608,77 @@ class FrankEnergieService:
             raise RuntimeError("Site access requires Frank Energie credentials.")
         async with self.bridge.session() as client:
             return await client.UserSites()
+
+
+def _best_split_series(
+    intervals: list[dict[str, Any]],
+    day: date,
+    total_minutes: int,
+    block_minutes: int,
+    step: int,
+) -> dict[str, Any]:
+    """Optimize fixed-length blocks using weighted interval scheduling."""
+    coverage = _average_series(intervals, day)
+    ordered = sorted(intervals, key=lambda item: item["date_from"])
+    block_size = block_minutes // step
+    count = total_minutes // block_minutes
+    candidates: list[tuple[datetime, datetime, float, list[dict[str, Any]]]] = []
+    for index in range(len(ordered) - block_size + 1):
+        group = ordered[index : index + block_size]
+        start = datetime.fromisoformat(group[0]["date_from"]).astimezone(UTC)
+        end = datetime.fromisoformat(group[-1]["date_till"]).astimezone(UTC)
+        if (end - start).total_seconds() != block_minutes * 60:
+            continue
+        if any(
+            group[offset]["date_till"] != group[offset + 1]["date_from"]
+            for offset in range(len(group) - 1)
+        ):
+            continue
+        average = sum(float(item["total"]) for item in group) / block_size
+        candidates.append((start, end, average, group))
+    candidates.sort(key=lambda item: (item[1], item[0]))
+    # DP over candidates and number of blocks, allowing gaps but not overlaps.
+    dp: list[list[tuple[float, tuple[int, ...]] | None]] = [
+        [None] * (count + 1) for _ in range(len(candidates) + 1)
+    ]
+    dp[0][0] = (0.0, ())
+    for index, candidate in enumerate(candidates, start=1):
+        previous = index - 1
+        while previous > 0 and candidates[previous - 1][1] > candidate[0]:
+            previous -= 1
+        for selected in range(count + 1):
+            dp[index][selected] = dp[index - 1][selected]
+            if selected == 0 or dp[previous][selected - 1] is None:
+                continue
+            old_cost, old_indices = dp[previous][selected - 1]
+            proposal = (old_cost + candidate[2], (*old_indices, index - 1))
+            current = dp[index][selected]
+            if current is None or proposal < current:
+                dp[index][selected] = proposal
+    best = dp[len(candidates)][count]
+    blocks: list[dict[str, Any]] = []
+    if best is not None:
+        for index in sorted(best[1], key=lambda item: candidates[item][0]):
+            start, end, average, group = candidates[index]
+            blocks.append({
+                "start": group[0]["date_from"],
+                "end": group[-1]["date_till"],
+                "duration_minutes": block_minutes,
+                "average_total": average,
+                "unit": group[0]["unit"],
+            })
+    return {
+        "blocks": blocks,
+        "total_duration_minutes": total_minutes if best is not None else None,
+        "average_total": best[0] / count if best is not None else None,
+        "total_cost_per_unit": best[0] * block_minutes / 60 if best is not None else None,
+        "unit": blocks[0]["unit"] if blocks else None,
+        "candidate_count": len(candidates),
+        "status": "selected" if best is not None else "insufficient_data",
+        "coverage_seconds": coverage["coverage_seconds"],
+        "expected_seconds": coverage["expected_seconds"],
+        "coverage_status": coverage["status"],
+    }
 
 
 def _threshold_period(intervals: list[dict[str, Any]]) -> dict[str, Any]:
