@@ -312,11 +312,9 @@ class FrankEnergieService:
                 for index in range(len(totals) - 1)
                 if intervals[index]["date_till"] == intervals[index + 1]["date_from"]
             ]
-            mean_change = (
-                sum(adjacent_changes) / len(adjacent_changes)
-                if adjacent_changes
-                else None
-            )
+            mean_change = None
+            if adjacent_changes:
+                mean_change = sum(adjacent_changes) / len(adjacent_changes)
             result[energy] = {
                 "average_total": average,
                 "spread": spread,
