@@ -23,6 +23,7 @@ async def test_register_tools_populates_all_tools() -> None:
         "get_price_threshold_periods",
         "get_negative_price_periods",
         "get_price_trend",
+        "get_price_volatility",
         "get_highest_price",
         "get_lowest_period",
         "get_lowest_price",
