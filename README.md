@@ -214,3 +214,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md), [MCP_SPEC.md](MCP_SPEC.md), [AI_POLICY.m
 **External ChatGPT access:** Not production-ready yet. The built-in Streamable HTTP listener is **loopback-only and unauthenticated**. Do not expose it publicly or treat a TLS tunnel alone as sufficient authentication. A production deployment needs an HTTPS ingress with validated client authentication and authorization, restricted access to the upstream loopback service, rate limiting, request/body size limits, TLS certificate management, and documented token rotation. Verify that the intended ChatGPT MCP connector supports the chosen authentication flow before deployment. A reverse proxy or tunnel must not forward unauthenticated public requests to `/mcp`.
 
 **Release blockers:** Verify all CI checks on the exact release commit; validate real MCP tool calls over both transports; test upstream timeouts, authentication failures, missing data, and time-zone boundaries; and document a rollback procedure. The legacy module review is complete: unused placeholders were removed, while `models.py` and `tools/__init__.py` remain for import compatibility. Do not describe the service as production-ready until the remaining checks pass.
+
+## Price threshold periods
+
+Use `get_price_threshold_periods` to find contiguous intervals where electricity or gas normalized total prices are strictly `below` or `above` a finite threshold. Example: `threshold=0.0`, `comparison="below"`, `resolution="PT15M"` finds negative-price windows. Missing price bins do not join separate periods.
