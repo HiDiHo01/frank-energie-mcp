@@ -100,6 +100,5 @@ async def test_mcp_delegates_statistics() -> None:
     service = AsyncMock()
     server = create_server(service)
     await server.call_tool("get_price_statistics", {"day": "2026-06-15"})
-    service.get_price_statistics.assert_awaited_once_with(
-        day=date(2026, 6, 15), resolution="PT15M"
-    )
+    expected_arguments = {"day": date(2026, 6, 15), "resolution": "PT15M"}
+    service.get_price_statistics.assert_awaited_once_with(**expected_arguments)
