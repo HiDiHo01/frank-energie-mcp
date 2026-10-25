@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Twenty read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Twenty-one read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -229,3 +229,7 @@ The test suite covers service delegation, upstream call signatures, session clea
 `get_best_split_periods` selects globally cheapest non-overlapping blocks of a fixed length; block and total durations must be positive resolution multiples, with total divisible by block duration. It excludes missing intervals and does not fabricate prices. `total_cost_per_unit` is the sum of each selected block's average total price multiplied by its duration in hours (cost for a constant load of one energy unit per hour); it is not a household cost estimate. Selection is null if the requested schedule cannot be fulfilled.
 
 `calculate_battery_savings` is a conservative **single-cycle, single-interval charge then single-interval discharge** estimate, not a full battery dispatch optimization. It assumes an initially empty battery, sufficient consumption during discharge to avoid retail purchases, no export remuneration, no fixed charges, no battery degradation cost, and no carryover across days. Both efficiency parameters must be in (0, 1]. Only complete local-day price coverage produces a numerical savings estimate; zero means no profitable cycle. Negative all-in prices are supported. All-in price units are currency per kWh, and the estimate is in the corresponding currency.
+
+### `get_price_statistics`
+
+`get_price_statistics(day=None, resolution="PT15M")` returns electricity and gas statistics over the **observed** intervals: duration-weighted mean, population variance, standard deviation, minimum, maximum, median and percentiles P10/P25/P75/P90. Percentiles use the **duration-weighted nearest-rank** method (first price where cumulative observed duration reaches the percentile); they are not interpolated. Counts of negative/zero intervals and their durations are included. Missing intervals are never imputed: `coverage_status`, `coverage_seconds`, `expected_seconds`, and `complete` expose completeness, including 23/25-hour Amsterdam DST days. Empty series have null numeric statistics. Price unit is the normalized upstream unit, and totals are all-in prices.
