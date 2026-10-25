@@ -65,6 +65,4 @@ async def test_price_trend_mcp_delegates() -> None:
     service = AsyncMock()
     server = create_server(service)
     await server.call_tool("get_price_trend", {"day": "2026-06-15", "resolution": "PT60M"})
-    service.get_price_trend.assert_awaited_once_with(
-        day=date(2026, 6, 15), resolution="PT60M"
-    )
+    service.get_price_trend.assert_awaited_once_with(day=date(2026, 6, 15), resolution="PT60M")
