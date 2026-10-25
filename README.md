@@ -222,3 +222,7 @@ Use `get_price_threshold_periods` to find contiguous intervals where electricity
 ## Negative price periods
 
 Use `get_negative_price_periods(day=None, resolution="PT15M")` to identify consecutive periods with a strictly negative normalized total price for electricity and gas. Zero-price bins and missing intervals do not count as negative. The tool reuses the existing threshold analyzer and supports `PT15M` and `PT60M`.
+
+## Daily price trend
+
+Call `get_price_trend(day=None, resolution="PT15M")` to compare the first and last available normalized total prices for electricity and gas on a local date. The result classifies `rising`, `falling`, `stable`, or `unknown` (fewer than two intervals), and includes coverage metadata. This is an endpoint trend, not a prediction or statistical regression.
