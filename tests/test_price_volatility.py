@@ -73,9 +73,6 @@ async def test_volatility_does_not_bridge_missing_intervals() -> None:
 async def test_volatility_mcp_delegation() -> None:
     service = AsyncMock()
     server = create_server(service)
-    await server.call_tool(
-        "get_price_volatility", {"day": "2026-06-15", "resolution": "PT60M"}
-    )
-    service.get_price_volatility.assert_awaited_once_with(
-        day=date(2026, 6, 15), resolution="PT60M"
-    )
+    arguments = {"day": "2026-06-15", "resolution": "PT60M"}
+    await server.call_tool("get_price_volatility", arguments)
+    service.get_price_volatility.assert_awaited_once_with(day=date(2026, 6, 15), resolution="PT60M")
