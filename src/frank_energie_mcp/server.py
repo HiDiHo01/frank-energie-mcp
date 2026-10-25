@@ -149,6 +149,16 @@ def create_server(
         )
 
     @server.tool()
+    async def get_price_volatility(
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Calculate daily all-in price volatility and observed adjacent changes."""
+        return await safe_tool_call(
+            lambda: energy_service.get_price_volatility(day=day, resolution=resolution)
+        )
+
+    @server.tool()
     async def get_lowest_period(
         period_minutes: int,
         day: date | None = None,
