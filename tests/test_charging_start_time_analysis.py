@@ -49,8 +49,11 @@ async def test_start_time_comparison(
         deadline=first + step * 4,
         resolution=resolution,
     )
-    assert [item["estimated_cost"] for item in result["starts"]] == pytest.approx([-0.025, -0.025])
-    assert result["lowest_estimated_cost"] == pytest.approx(-0.025)
+    expected_cost = -0.1 * minutes / 60
+    assert [item["estimated_cost"] for item in result["starts"]] == pytest.approx(
+        [expected_cost, expected_cost]
+    )
+    assert result["lowest_estimated_cost"] == pytest.approx(expected_cost)
     assert result["cheapest_start"] == first.isoformat()
     assert result["starts"][0]["charging_duration_minutes"] == 2 * minutes
     assert result["starts"][1]["savings_vs_most_expensive"] == pytest.approx(0)
