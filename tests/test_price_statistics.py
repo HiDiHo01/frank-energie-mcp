@@ -22,9 +22,7 @@ def _service(
     for minutes, value in values:
         end = cursor + timedelta(minutes=minutes)
         intervals.append(
-            SimpleNamespace(
-                date_from=cursor, date_till=end, total=value, per_unit="kWh"
-            )
+            SimpleNamespace(date_from=cursor, date_till=end, total=value, per_unit="kWh")
         )
         cursor = end
     client = AsyncMock()
