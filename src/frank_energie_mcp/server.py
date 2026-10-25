@@ -185,6 +185,16 @@ def create_server(
         )
 
     @server.tool()
+    async def get_price_statistics(
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Get duration-weighted all-in price statistics for electricity and gas."""
+        return await safe_tool_call(
+            lambda: energy_service.get_price_statistics(day=day, resolution=resolution)
+        )
+
+    @server.tool()
     async def get_price_volatility(
         day: date | None = None,
         resolution: PriceResolution = "PT15M",
