@@ -58,9 +58,7 @@ async def test_forecast_summary_extrema_and_comparison() -> None:
 @pytest.mark.asyncio
 async def test_unavailable_tomorrow_has_no_invented_prices() -> None:
     service, _ = _service([0.1], [])
-    result = await service.get_price_forecast_summary(
-        day=date(2026, 6, 15), resolution="PT60M"
-    )
+    result = await service.get_price_forecast_summary(day=date(2026, 6, 15), resolution="PT60M")
     electricity = result["electricity"]
     assert electricity["tomorrow"]["status"] == "empty"
     assert electricity["tomorrow"]["cheapest_period"] is None
