@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Seventeen read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Eighteen read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -19,6 +19,7 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_current_prices` | `get_current_prices(resolution)` | Object with `electricity` and `gas` active upstream `current_hour` intervals, each a normalized record or `null` |
 | `get_today_prices` | `get_today_prices(resolution)` | Normalized `electricity` and `gas` interval arrays from `prices(today, resolution=...)` |
 | `get_tomorrow_prices` | `get_tomorrow_prices(resolution)` | Normalized interval arrays from `prices(tomorrow, resolution=...)` |
+| `compare_days` | `compare_days(first_day, second_day, resolution)` | Per-energy observed average/minimum/maximum normalized all-in totals for both local days, absolute and percentage differences, and DST-aware coverage metadata. |
 | `get_average_prices` | `get_average_prices(day, resolution)` | Per-energy average of all available normalized `total` values, interval count, first/last timestamps, observed and expected coverage seconds, and `empty`/`incomplete`/`complete` status. `day` defaults to today in Europe/Amsterdam. Overlaps and out-of-day intervals are rejected. |
 | `get_lowest_price` | `get_lowest_price(day, resolution)` | Minimum total interval for each energy type, with coverage metadata. |
 | `get_highest_price` | `get_highest_price(day, resolution)` | Maximum total interval for each energy type, with coverage metadata. |
@@ -220,3 +221,5 @@ The test suite covers service delegation, upstream call signatures, session clea
 `get_price_trend` compares the earliest and latest available normalized total-price intervals for the selected local date. Equal values are `stable`; one or zero intervals yield `unknown`. The tool reports coverage separately and does not infer missing prices or forecast beyond the selected day.
 
 `get_price_volatility` calculates the population standard deviation of observed normalized total prices. The mean absolute change excludes pairs separated by missing intervals. A single interval yields zero spread/deviation but no adjacent-change estimate; empty datasets return null metrics. Coverage is reported separately, without imputing missing intervals.
+
+`compare_days` reports the second day's price minus the first day's price. Percentage changes use the absolute value of the first day's price as denominator; they are null when the baseline is zero or either day has no observations. Each day is validated independently for gaps, overlaps and DST-aware calendar boundaries. Incomplete coverage is flagged, not filled.
