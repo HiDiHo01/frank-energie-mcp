@@ -26,6 +26,7 @@ async def test_register_tools_populates_all_tools() -> None:
         "get_price_trend",
         "get_price_volatility",
         "get_highest_price",
+        "get_best_split_periods",
         "get_lowest_period",
         "get_lowest_price",
         "get_current_prices",
