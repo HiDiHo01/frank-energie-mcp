@@ -33,3 +33,23 @@ def test_price_interval_uses_utc_order_during_fall_dst_fold(
     else:
         with pytest.raises(ValueError, match="ordered"):
             normalize_interval(price)
+
+
+def test_price_interval_accepts_spring_forward_transition() -> None:
+    """A real 30-minute interval may jump over the missing local hour."""
+    zone = ZoneInfo("Europe/Amsterdam")
+    start = datetime(2026, 3, 29, 1, 45, tzinfo=zone)
+    end = datetime(2026, 3, 29, 3, 15, tzinfo=zone)
+    result = normalize_interval(SimpleNamespace(date_from=start, date_till=end, total=0.2))
+    assert result["date_from"] == start.isoformat()
+    assert result["date_till"] == end.isoformat()
+
+
+def test_price_interval_rejects_reverse_order_across_different_offsets() -> None:
+    """Different timezone offsets must not mask reversed absolute instants."""
+    from datetime import UTC, timedelta, timezone
+
+    start = datetime(2026, 3, 29, 3, 15, tzinfo=timezone(timedelta(hours=2)))
+    end = datetime(2026, 3, 29, 0, 45, tzinfo=UTC)
+    with pytest.raises(ValueError, match="ordered"):
+        normalize_interval(SimpleNamespace(date_from=start, date_till=end, total=0.2))
