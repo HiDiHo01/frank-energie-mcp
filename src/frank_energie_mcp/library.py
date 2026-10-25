@@ -425,12 +425,10 @@ class FrankEnergieService:
         utc_deadlines = [item.astimezone(UTC) for item in deadlines]
         if len(set(utc_deadlines)) != len(utc_deadlines):
             raise ValueError("deadlines must be unique instants.")
-        if any(
-            item <= start.astimezone(UTC)
-            or item - start.astimezone(UTC) > timedelta(hours=48)
-            for item in utc_deadlines
-        ):
-            raise ValueError("Each deadline must be within 48 hours after start.")
+        utc_start = start.astimezone(UTC)
+        for item in utc_deadlines:
+            if not utc_start < item <= utc_start + timedelta(hours=48):
+                raise ValueError("Each deadline must be within 48 hours after start.")
         results: list[dict[str, Any]] = []
         for deadline in deadlines:
             plan = await self.get_optimal_charging_schedule(
