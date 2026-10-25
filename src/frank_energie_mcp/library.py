@@ -145,14 +145,10 @@ class FrankEnergieService:
                 before = left[metric]
                 after = right[metric]
                 change = after - before if before is not None and after is not None else None
-                differences[metric] = {
-                    "absolute": change,
-                    "percent": (
-                        change / abs(before) * 100
-                        if change is not None and before != 0
-                        else None
-                    ),
-                }
+                percent = None
+                if change is not None and before != 0:
+                    percent = change / abs(before) * 100
+                differences[metric] = {"absolute": change, "percent": percent}
             result[energy] = {
                 "first": left,
                 "second": right,
