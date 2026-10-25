@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
-from typing import Literal
 from types import SimpleNamespace
+from typing import Literal
 from unittest.mock import AsyncMock
 
 import pytest
@@ -35,7 +35,9 @@ def _service(entries: list[SimpleNamespace]) -> tuple[FrankEnergieService, Async
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("step,resolution", [(15, "PT15M"), (60, "PT60M")])
-async def test_threshold_groups_adjacent_prices_and_splits_gaps(step: int, resolution: str) -> None:
+async def test_threshold_groups_adjacent_prices_and_splits_gaps(
+    step: int, resolution: Literal["PT15M", "PT60M"]
+) -> None:
     """Matching bins separated by a gap remain distinct periods."""
     start = datetime(2026, 6, 14, 22, tzinfo=UTC)
     service, client = _service(
