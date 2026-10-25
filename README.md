@@ -246,3 +246,7 @@ Use `calculate_battery_savings(capacity_kwh=1, charge_power_kw=4, discharge_powe
 ## Daily price statistics
 
 Use `get_price_statistics(day="2026-06-15", resolution="PT15M")` for duration-weighted mean, median, percentiles, population variance, standard deviation, extrema, negative/zero counts and coverage for electricity and gas. Percentiles use duration-weighted nearest rank; incomplete days are marked rather than filled with invented prices.
+
+## Today and tomorrow summary
+
+Use `get_price_forecast_summary(day="2026-06-15", resolution="PT15M", period_minutes=60)` to compare observed all-in prices and cheapest/dearest contiguous windows for two consecutive local dates. The tool does not predict unpublished prices; it reports missing intervals and incomplete coverage explicitly.
