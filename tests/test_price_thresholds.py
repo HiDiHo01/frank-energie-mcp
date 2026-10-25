@@ -34,14 +34,14 @@ def _service(entries: list[SimpleNamespace]) -> tuple[FrankEnergieService, Async
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("step,resolution", [(15, "PT15M"), (60, "PT60M")])
-async def test_threshold_groups_adjacent_prices_and_splits_gaps(
-    step: int, resolution: str
-) -> None:
+async def test_threshold_groups_adjacent_prices_and_splits_gaps(step: int, resolution: str) -> None:
     """Matching bins separated by a gap remain distinct periods."""
     start = datetime(2026, 6, 14, 22, tzinfo=UTC)
     service, client = _service(
-        [_record(start + timedelta(minutes=i * step), step, price)
-         for i, price in [(0, -0.1), (1, 0.1), (3, 0.1), (4, 0.3)]]
+        [
+            _record(start + timedelta(minutes=i * step), step, price)
+            for i, price in [(0, -0.1), (1, 0.1), (3, 0.1), (4, 0.3)]
+        ]
     )
     result = await service.get_price_threshold_periods(0.2, "below", date(2026, 6, 15), resolution)
     periods = result["electricity"]["periods"]
@@ -58,7 +58,9 @@ async def test_threshold_groups_adjacent_prices_and_splits_gaps(
 async def test_above_comparison_is_strict() -> None:
     """Threshold equality is excluded and negative prices remain valid."""
     start = datetime(2026, 6, 14, 22, tzinfo=UTC)
-    service, _ = _service([_record(start, 15, -0.2), _record(start + timedelta(minutes=15), 15, -0.1)])
+    service, _ = _service(
+        [_record(start, 15, -0.2), _record(start + timedelta(minutes=15), 15, -0.1)]
+    )
     result = await service.get_price_threshold_periods(-0.2, "above", date(2026, 6, 15))
     assert result["electricity"]["matching_interval_count"] == 1
 
@@ -101,5 +103,7 @@ async def test_dst_fallback_keeps_repeated_hour_contiguous() -> None:
     """UTC-adjacent bins across the Amsterdam clock rollback form one group."""
     start = datetime(2026, 10, 24, 22, tzinfo=UTC)
     service, _ = _service([_record(start + timedelta(hours=i), 60, 0.1) for i in range(5)])
-    result = await service.get_price_threshold_periods(0.2, day=date(2026, 10, 25), resolution="PT60M")
+    result = await service.get_price_threshold_periods(
+        0.2, day=date(2026, 10, 25), resolution="PT60M"
+    )
     assert result["electricity"]["periods"][0]["duration_minutes"] == 300
