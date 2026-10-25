@@ -1,6 +1,6 @@
 """Regression tests for timezone-aware price interval chronology."""
 
-from datetime import datetime
+from datetime import UTC, datetime, timedelta, timezone
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
@@ -47,8 +47,6 @@ def test_price_interval_accepts_spring_forward_transition() -> None:
 
 def test_price_interval_rejects_reverse_order_across_different_offsets() -> None:
     """Different timezone offsets must not mask reversed absolute instants."""
-    from datetime import UTC, timedelta, timezone
-
     start = datetime(2026, 3, 29, 3, 15, tzinfo=timezone(timedelta(hours=2)))
     end = datetime(2026, 3, 29, 0, 45, tzinfo=UTC)
     with pytest.raises(ValueError, match="ordered"):
