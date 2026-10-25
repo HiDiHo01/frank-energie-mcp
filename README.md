@@ -52,6 +52,7 @@ The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol e
 
 | Kind | Name | Current behavior |
 | --- | --- | --- |
+| Tool | `get_charging_power_analysis` | Compare 1–12 charging power levels for a fixed energy target and deadline using published prices; return feasibility, estimated costs, schedules, and difference from cheapest feasible option. |
 | Tool | `get_current_prices` | Returns current electricity and gas intervals via upstream `current_hour` |
 | Tool | `get_today_prices` | Fetches today's market prices |
 | Tool | `get_tomorrow_prices` | Fetches tomorrow's market prices |
