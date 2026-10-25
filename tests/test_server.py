@@ -43,6 +43,7 @@ async def test_registers_fourteen_tools() -> None:
         "get_charging_cost_breakdown",
         "get_charging_efficiency_analysis",
         "get_charging_power_analysis",
+        "get_charging_start_time_analysis",
         "get_charging_deadline_analysis",
         "compare_charging_strategies",
         "get_optimal_charging_schedule",
