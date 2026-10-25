@@ -475,11 +475,9 @@ class FrankEnergieService:
             saving = baseline - cost if baseline is not None and cost is not None else None
             comparisons[name] = {
                 "saving_amount": saving,
-                "saving_percent": (
-                    saving / abs(baseline) * 100
-                    if saving is not None and baseline != 0
-                    else None
-                ),
+                "saving_percent": saving / abs(baseline) * 100
+                if saving is not None and baseline != 0
+                else None,
             }
         return {
             "resolution": resolution,
