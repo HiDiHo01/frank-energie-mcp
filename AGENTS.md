@@ -308,6 +308,17 @@ Do not overwrite stored credentials to run these commands. Report network,
 timeout, API-response, and unexpected-client failures accurately. Passing mocked
 tests does not prove live API or end-to-end MCP-client interoperability.
 
+## Mandatory check remediation
+
+- For every implementation PR, inspect all relevant GitHub Actions results
+  (CI, Lint, Quality, Verify) after pushing changes.
+- If a required check fails, inspect the failing job logs, fix the root cause
+  on the same PR branch, and repeat until all required checks succeed.
+- Do not mark a PR ready to merge or claim checks are green while a check is
+  failing, pending, cancelled, or not yet reported.
+- Do not bypass or weaken checks to obtain a passing result. Do not merge
+  without explicit maintainer authorization.
+
 ## Tooling and CI/CD discipline
 
 `pyproject.toml` configures Ruff for `py314`, 100-character Python lines, and
