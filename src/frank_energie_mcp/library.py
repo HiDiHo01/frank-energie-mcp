@@ -437,7 +437,7 @@ class FrankEnergieService:
         immediate_deadline = start.astimezone(UTC) + timedelta(
             seconds=required_slots * step_seconds
         )
-        common = {
+        common: dict[str, Any] = {
             "energy_kwh": energy_kwh,
             "max_power_kw": max_power_kw,
             "start": start,
