@@ -623,6 +623,13 @@ class FrankEnergieService:
                 {
                     "deadline": deadline.isoformat(),
                     "status": plan["status"],
+                    "required_grid_kwh": plan["required_grid_kwh"],
+                    "required_slot_count": plan["required_slot_count"],
+                    "charging_duration_minutes": (
+                        len(plan["schedule"]) * (15 if resolution == "PT15M" else 60)
+                        if plan["status"] == "ok"
+                        else None
+                    ),
                     "estimated_cost": plan["estimated_cost"],
                     "schedule": plan["schedule"],
                 }
