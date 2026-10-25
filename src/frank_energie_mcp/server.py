@@ -185,6 +185,27 @@ def create_server(
         )
 
     @server.tool()
+    async def compare_charging_strategies(
+        energy_kwh: float,
+        max_power_kw: float,
+        start: datetime,
+        deadline: datetime,
+        efficiency: float = 1.0,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Compare the costs of three published-price charging strategies."""
+        return await safe_tool_call(
+            lambda: energy_service.compare_charging_strategies(
+                energy_kwh=energy_kwh,
+                max_power_kw=max_power_kw,
+                start=start,
+                deadline=deadline,
+                efficiency=efficiency,
+                resolution=resolution,
+            )
+        )
+
+    @server.tool()
     async def get_optimal_charging_schedule(
         energy_kwh: float,
         max_power_kw: float,
