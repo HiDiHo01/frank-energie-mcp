@@ -59,6 +59,7 @@ The local MCP endpoint is `http://127.0.0.1:8000/mcp`. This is an MCP protocol e
 | Tool | `get_lowest_price` | Lowest available normalized total interval per energy type, with coverage status. |
 | Tool | `get_highest_price` | Highest available normalized total interval per energy type, with coverage status. |
 | Tool | `get_lowest_period` | Finds the cheapest uninterrupted window by average normalized total price. |
+| Tool | `get_best_start_time` | Cheapest contiguous electricity window and optional cost estimate for constant-rate consumption. |
 | Tool | `get_highest_period` | Finds the most expensive uninterrupted window by average normalized total price. |
 | Tool | `get_gas_price` | Returns the current gas interval or `null` when unavailable |
 | Tool | `get_account` | Requires credentials and a site reference; returns only `{"authenticated": true}` after a successful account request |
@@ -129,6 +130,23 @@ Only fully contained, contiguous windows are considered; gaps are not
 filled. The search uses the entire requested calendar day and does not
 restrict today's result to future intervals. Equal averages prefer the
 earliest window. See [MCP_SPEC.md](MCP_SPEC.md).
+
+## Best electricity start time
+
+`get_best_start_time` accepts `period_minutes`, optional `day` and
+`resolution`, and optional `consumption_kwh` (finite and non-negative).
+For example:
+
+```json
+{"period_minutes": 240, "resolution": "PT15M", "consumption_kwh": 8}
+```
+
+The tool uses the existing cheapest consecutive-window algorithm for
+electricity. It returns start/end timestamps, average normalized total
+price and, when consumption is supplied, an estimated cost assuming a
+constant consumption rate over the window. It searches the **entire**
+requested day, including past intervals, and does not promise a future
+start. Missing complete windows produce null start/end/cost fields.
 
 ## Authentication
 
