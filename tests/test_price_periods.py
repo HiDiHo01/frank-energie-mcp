@@ -8,7 +8,11 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from frank_energie_mcp.library import FrankEnergieLibraryBridge, FrankEnergieService, PriceResolution
+from frank_energie_mcp.library import (
+    FrankEnergieLibraryBridge,
+    FrankEnergieService,
+    PriceResolution,
+)
 from frank_energie_mcp.server import create_server
 
 
@@ -36,7 +40,9 @@ def _service(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("resolution,step", [("PT15M", 15), ("PT60M", 60)])
-async def test_cheapest_and_most_expensive_four_hours(resolution: PriceResolution, step: int) -> None:
+async def test_cheapest_and_most_expensive_four_hours(
+    resolution: PriceResolution, step: int
+) -> None:
     """Choose a four-hour consecutive window by mean price, not a single interval."""
     day = date(2026, 6, 15)
     start = datetime(2026, 6, 14, 22, tzinfo=UTC)
