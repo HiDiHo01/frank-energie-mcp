@@ -35,9 +35,8 @@ def _service(
 
 @pytest.mark.asyncio
 async def test_weighted_statistics_with_unequal_intervals() -> None:
-    result = await _service([(15, -1.0), (45, 1.0)]).get_price_statistics(
-        day=date(2026, 6, 15)
-    )
+    service = _service([(15, -1.0), (45, 1.0)])
+    result = await service.get_price_statistics(day=date(2026, 6, 15))
     stats = result["electricity"]
     assert stats["interval_count"] == 2
     assert stats["coverage_status"] == "incomplete"
@@ -58,7 +57,8 @@ async def test_weighted_statistics_with_unequal_intervals() -> None:
 
 @pytest.mark.asyncio
 async def test_complete_day_and_zero_prices() -> None:
-    result = await _service([(60, 0.0)] * 24).get_price_statistics(
+    service = _service([(60, 0.0)] * 24)
+    result = await service.get_price_statistics(
         day=date(2026, 6, 15), resolution="PT60M"
     )
     stats = result["electricity"]
@@ -77,11 +77,11 @@ async def test_complete_day_and_zero_prices() -> None:
 async def test_dst_day_coverage(day: date, hours: int) -> None:
     from zoneinfo import ZoneInfo
 
-    local_start = datetime(day.year, day.month, day.day, tzinfo=ZoneInfo("Europe/Amsterdam"))
+    local_zone = ZoneInfo("Europe/Amsterdam")
+    local_start = datetime(day.year, day.month, day.day, tzinfo=local_zone)
     start = local_start.astimezone(UTC)
-    result = await _service([(60, 0.2)] * hours, start=start).get_price_statistics(
-        day=day, resolution="PT60M"
-    )
+    service = _service([(60, 0.2)] * hours, start=start)
+    result = await service.get_price_statistics(day=day, resolution="PT60M")
     assert result["electricity"]["complete"] is True
     assert result["electricity"]["expected_seconds"] == hours * 3600
 
