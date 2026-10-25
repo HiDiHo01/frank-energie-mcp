@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Fourteen read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Fifteen read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -23,6 +23,7 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_lowest_price` | `get_lowest_price(day, resolution)` | Minimum total interval for each energy type, with coverage metadata. |
 | `get_highest_price` | `get_highest_price(day, resolution)` | Maximum total interval for each energy type, with coverage metadata. |
 | `get_lowest_period` | `get_lowest_period(period_minutes, day, resolution)` | Cheapest uninterrupted fixed-duration window for electricity and gas, selected by arithmetic mean of normalized `total`. |
+| `get_negative_price_periods` | `get_negative_price_periods(day, resolution)` | Convenience wrapper for strict negative total-price intervals, returning the threshold-period response for electricity and gas. |
 | `get_price_threshold_periods` | `get_price_threshold_periods(threshold, comparison, day, resolution)` | Consecutive electricity and gas price intervals strictly below or above a finite threshold, with coverage metadata. |
 | `calculate_energy_cost` | `calculate_energy_cost(start, end, consumption_kwh, resolution)` | Electricity cost estimate using duration-weighted normalized prices over a fully covered time range. |
 | `get_best_start_time` | `get_best_start_time(period_minutes, day, resolution, consumption_kwh)` | Cheapest contiguous electricity window and optional estimated energy cost. |
@@ -211,3 +212,5 @@ The test suite covers service delegation, upstream call signatures, session clea
 ## Threshold period contract
 
 `get_price_threshold_periods` accepts a finite numeric threshold, `below` or `above` (strict comparisons), an optional Amsterdam calendar date and `PT15M`/`PT60M` resolution. Each energy type returns `periods`, `matching_interval_count`, `interval_count`, `coverage_seconds`, `expected_seconds`, and `status`. Periods report `start`, `end`, `duration_minutes`, `interval_count`, `average_total`, and `unit`. Gaps, nonmatching intervals and invalid-duration bins break groups. Overlapping and out-of-day records are rejected. Empty data yields no periods. Negative prices are supported.
+
+`get_negative_price_periods` delegates to `get_price_threshold_periods(threshold=0.0, comparison="below")`. Zero-price intervals are excluded; the returned date, resolution, coverage metadata, and period fields use the same contract. It requires no credentials and does not perform an additional API request.
