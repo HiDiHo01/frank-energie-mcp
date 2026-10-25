@@ -402,6 +402,74 @@ class FrankEnergieService:
         result["estimated_savings"] = best_savings
         return result
 
+    async def get_charging_deadline_analysis(
+        self,
+        energy_kwh: float,
+        max_power_kw: float,
+        start: datetime,
+        deadlines: list[datetime],
+        efficiency: float = 1.0,
+        allow_interruptions: bool = True,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Compare achievable charging costs for a bounded set of deadlines."""
+        if not isinstance(deadlines, list) or not 1 <= len(deadlines) <= 12:
+            raise ValueError("deadlines must contain between 1 and 12 timestamps.")
+        if start.tzinfo is None or start.utcoffset() is None:
+            raise ValueError("start must be timezone-aware.")
+        if any(
+            not isinstance(item, datetime)
+            or item.tzinfo is None
+            or item.utcoffset() is None
+            for item in deadlines
+        ):
+            raise ValueError("All deadlines must be timezone-aware datetimes.")
+        utc_deadlines = [item.astimezone(UTC) for item in deadlines]
+        if len(set(utc_deadlines)) != len(utc_deadlines):
+            raise ValueError("deadlines must be unique instants.")
+        if any(
+            item <= start.astimezone(UTC)
+            or item - start.astimezone(UTC) > timedelta(hours=48)
+            for item in utc_deadlines
+        ):
+            raise ValueError("Each deadline must be within 48 hours after start.")
+        results: list[dict[str, Any]] = []
+        for deadline in deadlines:
+            plan = await self.get_optimal_charging_schedule(
+                energy_kwh=energy_kwh,
+                max_power_kw=max_power_kw,
+                start=start,
+                deadline=deadline,
+                efficiency=efficiency,
+                allow_interruptions=allow_interruptions,
+                resolution=resolution,
+            )
+            results.append(
+                {
+                    "deadline": deadline.isoformat(),
+                    "status": plan["status"],
+                    "estimated_cost": plan["estimated_cost"],
+                    "schedule": plan["schedule"],
+                }
+            )
+        available = [
+            float(item["estimated_cost"])
+            for item in results
+            if item["estimated_cost"] is not None
+        ]
+        cheapest = min(available) if available else None
+        for item in results:
+            cost = item["estimated_cost"]
+            item["additional_cost_vs_cheapest"] = (
+                float(cost) - cheapest if cost is not None and cheapest is not None else None
+            )
+        return {
+            "resolution": resolution,
+            "allow_interruptions": allow_interruptions,
+            "lowest_estimated_cost": cheapest,
+            "deadlines": results,
+        }
+
     async def compare_charging_strategies(
         self,
         energy_kwh: float,
