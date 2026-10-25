@@ -1,6 +1,7 @@
 """Regression tests for timezone-aware price interval chronology."""
 
 from datetime import UTC, datetime, timedelta, timezone
+from math import inf, nan
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
@@ -59,3 +60,21 @@ def test_price_interval_rejects_equal_instants_with_different_offsets() -> None:
     end = datetime(2026, 10, 25, 1, 30, tzinfo=timezone(timedelta(hours=1)))
     with pytest.raises(ValueError, match="ordered"):
         normalize_interval(SimpleNamespace(date_from=start, date_till=end, total=0.2))
+
+
+@pytest.mark.parametrize("amount", [nan, inf, -inf, True, False, "0.2"])
+def test_price_interval_rejects_nonfinite_or_nonnumeric_amount(amount: object) -> None:
+    """Do not publish invalid, non-finite, or boolean prices."""
+    start = datetime(2026, 10, 25, 12, 0, tzinfo=UTC)
+    end = datetime(2026, 10, 25, 12, 15, tzinfo=UTC)
+    with pytest.raises(ValueError, match="amount"):
+        normalize_interval(SimpleNamespace(date_from=start, date_till=end, total=amount))
+
+
+@pytest.mark.parametrize("amount", [0, -0.1, 0.2])
+def test_price_interval_accepts_finite_prices_including_negative(amount: float) -> None:
+    """Negative electricity prices and zero remain valid measurements."""
+    start = datetime(2026, 10, 25, 12, 0, tzinfo=UTC)
+    end = datetime(2026, 10, 25, 12, 15, tzinfo=UTC)
+    result = normalize_interval(SimpleNamespace(date_from=start, date_till=end, total=amount))
+    assert result["total"] == float(amount)
