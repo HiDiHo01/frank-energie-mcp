@@ -648,9 +648,12 @@ def _best_split_series(
             previous -= 1
         for selected in range(count + 1):
             dp[index][selected] = dp[index - 1][selected]
-            if selected == 0 or dp[previous][selected - 1] is None:
+            if selected == 0:
                 continue
-            old_cost, old_indices = dp[previous][selected - 1]
+            previous_result = dp[previous][selected - 1]
+            if previous_result is None:
+                continue
+            old_cost, old_indices = previous_result
             proposal = (old_cost + candidate[2], (*old_indices, index - 1))
             current = dp[index][selected]
             if current is None or proposal < current:
