@@ -185,6 +185,19 @@ def create_server(
         )
 
     @server.tool()
+    async def get_price_forecast_summary(
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+        period_minutes: int = 60,
+    ) -> object:
+        """Summarize available all-in prices today and tomorrow."""
+        return await safe_tool_call(
+            lambda: energy_service.get_price_forecast_summary(
+                day=day, resolution=resolution, period_minutes=period_minutes
+            )
+        )
+
+    @server.tool()
     async def get_price_statistics(
         day: date | None = None,
         resolution: PriceResolution = "PT15M",
