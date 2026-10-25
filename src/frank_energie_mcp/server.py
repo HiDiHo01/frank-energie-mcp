@@ -185,6 +185,29 @@ def create_server(
         )
 
     @server.tool()
+    async def get_charging_deadline_analysis(
+        energy_kwh: float,
+        max_power_kw: float,
+        start: datetime,
+        deadlines: list[datetime],
+        efficiency: float = 1.0,
+        allow_interruptions: bool = True,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Compare charging plans for up to twelve timezone-aware deadlines."""
+        return await safe_tool_call(
+            lambda: energy_service.get_charging_deadline_analysis(
+                energy_kwh=energy_kwh,
+                max_power_kw=max_power_kw,
+                start=start,
+                deadlines=deadlines,
+                efficiency=efficiency,
+                allow_interruptions=allow_interruptions,
+                resolution=resolution,
+            )
+        )
+
+    @server.tool()
     async def compare_charging_strategies(
         energy_kwh: float,
         max_power_kw: float,
