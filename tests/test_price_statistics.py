@@ -58,9 +58,7 @@ async def test_weighted_statistics_with_unequal_intervals() -> None:
 @pytest.mark.asyncio
 async def test_complete_day_and_zero_prices() -> None:
     service = _service([(60, 0.0)] * 24)
-    result = await service.get_price_statistics(
-        day=date(2026, 6, 15), resolution="PT60M"
-    )
+    result = await service.get_price_statistics(day=date(2026, 6, 15), resolution="PT60M")
     stats = result["electricity"]
     assert stats["complete"] is True
     assert stats["coverage_seconds"] == 86400
