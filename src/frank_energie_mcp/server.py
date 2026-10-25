@@ -185,6 +185,29 @@ def create_server(
         )
 
     @server.tool()
+    async def get_charging_cost_breakdown(
+        energy_kwh: float,
+        max_power_kw: float,
+        start: datetime,
+        deadline: datetime,
+        efficiency: float = 1.0,
+        allow_interruptions: bool = True,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Explain the costs, losses and negative-price energy of a charging plan."""
+        return await safe_tool_call(
+            lambda: energy_service.get_charging_cost_breakdown(
+                energy_kwh=energy_kwh,
+                max_power_kw=max_power_kw,
+                start=start,
+                deadline=deadline,
+                efficiency=efficiency,
+                allow_interruptions=allow_interruptions,
+                resolution=resolution,
+            )
+        )
+
+    @server.tool()
     async def get_charging_efficiency_analysis(
         energy_kwh: float,
         max_power_kw: float,
