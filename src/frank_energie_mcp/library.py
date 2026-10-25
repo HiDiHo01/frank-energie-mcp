@@ -226,6 +226,16 @@ class FrankEnergieService:
             }
         return result
 
+    async def get_negative_price_periods(
+        self,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Return strictly negative price periods using the shared threshold analyzer."""
+        return await self.get_price_threshold_periods(
+            threshold=0.0, comparison="below", day=day, resolution=resolution
+        )
+
     async def get_lowest_period(
         self,
         period_minutes: int,
