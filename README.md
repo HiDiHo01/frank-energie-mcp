@@ -258,3 +258,7 @@ Use `get_optimal_charging_schedule` to plan fixed-power charging from published 
 ## Compare charging strategies
 
 Use `compare_charging_strategies` to compare immediate, least-cost contiguous, and least-cost interruptible charging within a timezone-aware window. It reports estimated costs and savings versus immediate charging without inventing missing prices.
+
+## Charging deadline analysis
+
+Use `get_charging_deadline_analysis` to compare the cost of charging before multiple deadlines. The tool reuses `get_optimal_charging_schedule`, reports a plan for each deadline and the additional cost relative to the cheapest feasible deadline. It does not invent missing prices or control a charger.
