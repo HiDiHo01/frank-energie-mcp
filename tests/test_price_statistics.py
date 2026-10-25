@@ -89,7 +89,8 @@ async def test_rejects_overlapping_intervals() -> None:
     service = _service([(60, 0.1), (60, 0.2)])
     # A second interval with the same start violates the shared coverage contract.
     async with service.bridge.session() as client:
-        data = client.prices.return_value.electricity.price_data
+        prices = await client.prices(date(2026, 6, 15), resolution="PT15M")
+        data = prices.electricity.price_data
         data[1].date_from = data[0].date_from
     with pytest.raises(ValueError, match="Overlapping"):
         await service.get_price_statistics(day=date(2026, 6, 15))
