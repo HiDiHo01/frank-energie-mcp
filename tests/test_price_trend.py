@@ -38,7 +38,10 @@ async def test_price_trend_directions(
 ) -> None:
     """A daily trend compares the first and last chronological total prices."""
     start = datetime(2026, 6, 14, 22, tzinfo=UTC)
-    entries = [_record(start + timedelta(minutes=i * 15), 15, p) for i, p in enumerate(prices)]
+    entries = [
+        _record(start + timedelta(minutes=i * 15), 15, price)
+        for i, price in enumerate(prices)
+    ]
     client = AsyncMock()
     client.prices.return_value = SimpleNamespace(
         electricity=SimpleNamespace(price_data=list(reversed(entries))),
@@ -48,7 +51,10 @@ async def test_price_trend_directions(
     result = await service.get_price_trend(day=date(2026, 6, 15))
 
     assert result["electricity"]["trend"] == expected
-    assert result["electricity"]["change_total"] == pytest.approx(change) if change is not None else result["electricity"]["change_total"] is None
+    if change is None:
+        assert result["electricity"]["change_total"] is None
+    else:
+        assert result["electricity"]["change_total"] == pytest.approx(change)
     assert result["gas"]["trend"] == "unknown"
     assert result["electricity"]["interval_count"] == len(prices)
 
