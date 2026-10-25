@@ -139,6 +139,16 @@ def create_server(
         )
 
     @server.tool()
+    async def get_price_trend(
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Classify rising, falling or stable daily total-price trends."""
+        return await safe_tool_call(
+            lambda: energy_service.get_price_trend(day=day, resolution=resolution)
+        )
+
+    @server.tool()
     async def get_lowest_period(
         period_minutes: int,
         day: date | None = None,
