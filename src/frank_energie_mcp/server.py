@@ -467,11 +467,12 @@ def create_server(
     @server.tool()
     async def list_sites() -> object:
         """Get the account data containing delivery sites."""
-        data = await safe_tool_call(energy_service.list_sites)
-        try:
+        async def site_summary() -> dict[str, object]:
+            """Retrieve and validate the site count inside the safe error boundary."""
+            data = await energy_service.list_sites()
             return SitesResponse(count=_count_sites(data)).model_dump(mode="json")
-        except ValueError, TypeError:
-            raise ToolError("Frank Energie request failed.") from None
+
+        return await safe_tool_call(site_summary)
 
     @server.resource("frank-energie://capabilities")
     def capabilities() -> str:
