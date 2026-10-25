@@ -42,9 +42,7 @@ def _service(today: list[float], tomorrow: list[float]) -> tuple[FrankEnergieSer
 @pytest.mark.asyncio
 async def test_forecast_summary_extrema_and_comparison() -> None:
     service, client = _service([0.1, 0.3], [0.4, 0.2])
-    result = await service.get_price_forecast_summary(
-        day=date(2026, 6, 15), resolution="PT60M"
-    )
+    result = await service.get_price_forecast_summary(day=date(2026, 6, 15), resolution="PT60M")
     electricity = result["electricity"]
     assert electricity["today"]["average_total"] == pytest.approx(0.2)
     assert electricity["tomorrow"]["average_total"] == pytest.approx(0.3)
