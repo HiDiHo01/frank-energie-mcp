@@ -449,13 +449,13 @@ class FrankEnergieService:
                 }
             )
         available: list[float] = []
-        for item in results:
-            if item["estimated_cost"] is not None:
-                available.append(float(item["estimated_cost"]))
+        for result_entry in results:
+            if result_entry["estimated_cost"] is not None:
+                available.append(float(result_entry["estimated_cost"]))
         cheapest = min(available) if available else None
-        for item in results:
-            cost = item["estimated_cost"]
-            item["additional_cost_vs_cheapest"] = (
+        for result_entry in results:
+            cost = result_entry["estimated_cost"]
+            result_entry["additional_cost_vs_cheapest"] = (
                 float(cost) - cheapest if cost is not None and cheapest is not None else None
             )
         return {
