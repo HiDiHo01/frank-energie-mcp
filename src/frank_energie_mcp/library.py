@@ -417,13 +417,11 @@ class FrankEnergieService:
             raise ValueError("deadlines must contain between 1 and 12 timestamps.")
         if start.tzinfo is None or start.utcoffset() is None:
             raise ValueError("start must be timezone-aware.")
-        if any(
-            not isinstance(item, datetime)
-            or item.tzinfo is None
-            or item.utcoffset() is None
-            for item in deadlines
-        ):
-            raise ValueError("All deadlines must be timezone-aware datetimes.")
+        for item in deadlines:
+            if not isinstance(item, datetime) or item.tzinfo is None:
+                raise ValueError("All deadlines must be timezone-aware datetimes.")
+            if item.utcoffset() is None:
+                raise ValueError("All deadlines must be timezone-aware datetimes.")
         utc_deadlines = [item.astimezone(UTC) for item in deadlines]
         if len(set(utc_deadlines)) != len(utc_deadlines):
             raise ValueError("deadlines must be unique instants.")
