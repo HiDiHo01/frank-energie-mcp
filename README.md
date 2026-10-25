@@ -226,3 +226,7 @@ Use `get_negative_price_periods(day=None, resolution="PT15M")` to identify conse
 ## Daily price trend
 
 Call `get_price_trend(day=None, resolution="PT15M")` to compare the first and last available normalized total prices for electricity and gas on a local date. The result classifies `rising`, `falling`, `stable`, or `unknown` (fewer than two intervals), and includes coverage metadata. This is an endpoint trend, not a prediction or statistical regression.
+
+## Daily price volatility
+
+Use `get_price_volatility(day=None, resolution="PT15M")` for per-energy all-in price spread, population standard deviation, and mean absolute change between contiguous intervals. Missing intervals are not bridged; the response includes coverage status and the number of adjacent pairs.
