@@ -242,9 +242,7 @@ def _average_series(intervals: list[dict[str, Any]], day: date) -> dict[str, Any
     start = datetime(day.year, day.month, day.day, tzinfo=local_zone).astimezone(UTC)
     next_day = day + timedelta(days=1)
     end = datetime(next_day.year, next_day.month, next_day.day, tzinfo=local_zone).astimezone(UTC)
-    ordered = sorted(
-        intervals, key=lambda interval: datetime.fromisoformat(interval["date_from"])
-    )
+    ordered = sorted(intervals, key=lambda interval: datetime.fromisoformat(interval["date_from"]))
     observed_seconds = 0.0
     previous_end: datetime | None = None
     for interval in ordered:
@@ -273,7 +271,9 @@ def _average_series(intervals: list[dict[str, Any]], day: date) -> dict[str, Any
         "status": (
             "empty"
             if not ordered
-            else "complete" if observed_seconds == day_seconds else "incomplete"
+            else "complete"
+            if observed_seconds == day_seconds
+            else "incomplete"
         ),
     }
 
@@ -293,9 +293,7 @@ def _extreme_period(
     step_seconds = step_minutes * 60
     for index in range(len(ordered) - window_size + 1):
         window = ordered[index : index + window_size]
-        starts = [
-            datetime.fromisoformat(entry["date_from"]).astimezone(UTC) for entry in window
-        ]
+        starts = [datetime.fromisoformat(entry["date_from"]).astimezone(UTC) for entry in window]
         ends = [datetime.fromisoformat(entry["date_till"]).astimezone(UTC) for entry in window]
         if any(
             (end - start).total_seconds() != step_seconds
