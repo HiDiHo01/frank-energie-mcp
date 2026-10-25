@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -17,15 +17,18 @@ from frank_energie_mcp.server import create_server
 async def test_negative_price_periods_reuses_threshold_analysis(resolution: str) -> None:
     """Delegate to the existing strict negative-threshold implementation."""
     service = FrankEnergieService(FrankEnergieLibraryBridge(factory=AsyncMock))
-    service.get_price_threshold_periods = AsyncMock(return_value={"electricity": {"periods": []}})
     day = date(2026, 10, 25)
-
-    result = await service.get_negative_price_periods(day=day, resolution=resolution)
-
-    assert result["electricity"]["periods"] == []
-    service.get_price_threshold_periods.assert_awaited_once_with(
-        threshold=0.0, comparison="below", day=day, resolution=resolution
-    )
+    with patch.object(
+        service,
+        "get_price_threshold_periods",
+        new_callable=AsyncMock,
+    ) as threshold:
+        threshold.return_value = {"electricity": {"periods": []}}
+        result = await service.get_negative_price_periods(day=day, resolution=resolution)
+        assert result["electricity"]["periods"] == []
+        threshold.assert_awaited_once_with(
+            threshold=0.0, comparison="below", day=day, resolution=resolution
+        )
 
 
 @pytest.mark.asyncio
