@@ -162,6 +162,29 @@ def create_server(
         )
 
     @server.tool()
+    async def calculate_battery_savings(
+        capacity_kwh: float,
+        charge_power_kw: float,
+        discharge_power_kw: float,
+        charge_efficiency: float = 0.95,
+        discharge_efficiency: float = 0.95,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> object:
+        """Estimate maximum savings from one battery charge/discharge cycle."""
+        return await safe_tool_call(
+            lambda: energy_service.calculate_battery_savings(
+                capacity_kwh=capacity_kwh,
+                charge_power_kw=charge_power_kw,
+                discharge_power_kw=discharge_power_kw,
+                charge_efficiency=charge_efficiency,
+                discharge_efficiency=discharge_efficiency,
+                day=day,
+                resolution=resolution,
+            )
+        )
+
+    @server.tool()
     async def get_price_volatility(
         day: date | None = None,
         resolution: PriceResolution = "PT15M",
