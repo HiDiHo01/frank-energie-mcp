@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Twenty-five read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Twenty-six read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -16,6 +16,7 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 
 | Tool | Service operation | Current response |
 | --- | --- | --- |
+| `get_charging_power_analysis` | `get_charging_power_analysis(energy_kwh, power_levels_kw, start, deadline, efficiency, allow_interruptions, resolution)` | Compare 1–12 unique positive finite charging power levels against the same timezone-aware window. Returns each planner status, required grid energy and slot count, schedule, estimated cost, and extra cost relative to the cheapest feasible power level. Missing prices produce null costs; does not extrapolate prices. |
 | `get_current_prices` | `get_current_prices(resolution)` | Object with `electricity` and `gas` active upstream `current_hour` intervals, each a normalized record or `null` |
 | `get_today_prices` | `get_today_prices(resolution)` | Normalized `electricity` and `gas` interval arrays from `prices(today, resolution=...)` |
 | `get_tomorrow_prices` | `get_tomorrow_prices(resolution)` | Normalized interval arrays from `prices(tomorrow, resolution=...)` |
