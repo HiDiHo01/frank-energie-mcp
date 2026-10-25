@@ -467,6 +467,7 @@ def create_server(
     @server.tool()
     async def list_sites() -> object:
         """Get the account data containing delivery sites."""
+
         async def site_summary() -> dict[str, object]:
             """Retrieve and validate the site count inside the safe error boundary."""
             data = await energy_service.list_sites()
