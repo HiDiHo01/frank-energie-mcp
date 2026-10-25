@@ -48,9 +48,8 @@ async def test_power_levels_compare_costs() -> None:
     costs = [item["estimated_cost"] for item in result["power_levels"]]
     assert costs == pytest.approx([-0.1, -0.4])
     assert result["lowest_estimated_cost"] == pytest.approx(-0.4)
-    assert result["power_levels"][0]["additional_cost_vs_cheapest"] == pytest.approx(
-        0.3
-    )
+    difference = result["power_levels"][0]["additional_cost_vs_cheapest"]
+    assert difference == pytest.approx(0.3)
 
 
 @pytest.mark.asyncio
