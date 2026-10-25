@@ -177,6 +177,31 @@ async def test_unknown_sites_structure_is_rejected_without_leaking_data() -> Non
 
 
 @pytest.mark.asyncio
+async def test_sites_property_failure_is_sanitized() -> None:
+    """Never expose private data from a failing upstream sites property."""
+    secret = "fake-site-token-DO-NOT-EXPOSE"
+
+    class BrokenSites:
+        """Simulate an upstream object with a failing sites property."""
+
+        @property
+        def sites(self) -> object:
+            """Raise an exception containing a synthetic secret."""
+            raise RuntimeError(f"site token={secret}")
+
+    service = AsyncMock()
+    service.list_sites.return_value = BrokenSites()
+    try:
+        response = await create_server(service).call_tool("list_sites", {})
+        rendered = str(response)
+    except Exception as exc:
+        rendered = str(exc)
+
+    assert "Frank Energie request failed" in rendered
+    assert secret not in rendered
+
+
+@pytest.mark.asyncio
 async def test_mcp_price_resolution_parameter() -> None:
     """Allow hourly resolution and reject unsupported values at the tool boundary."""
     service = AsyncMock()
