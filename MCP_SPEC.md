@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Twelve read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Thirteen read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -23,6 +23,7 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_lowest_price` | `get_lowest_price(day, resolution)` | Minimum total interval for each energy type, with coverage metadata. |
 | `get_highest_price` | `get_highest_price(day, resolution)` | Maximum total interval for each energy type, with coverage metadata. |
 | `get_lowest_period` | `get_lowest_period(period_minutes, day, resolution)` | Cheapest uninterrupted fixed-duration window for electricity and gas, selected by arithmetic mean of normalized `total`. |
+| `calculate_energy_cost` | `calculate_energy_cost(start, end, consumption_kwh, resolution)` | Electricity cost estimate using duration-weighted normalized prices over a fully covered time range. |
 | `get_best_start_time` | `get_best_start_time(period_minutes, day, resolution, consumption_kwh)` | Cheapest contiguous electricity window and optional estimated energy cost. |
 | `get_highest_period` | `get_highest_period(period_minutes, day, resolution)` | Most expensive uninterrupted fixed-duration window, with the same response contract. |
 | `get_gas_price` | `get_gas_price(resolution)` | Normalized active gas interval or `null` |
@@ -147,6 +148,25 @@ and `status`. Without a contiguous window, `start`, `end`,
 consumption rate across the selected window; no estimate is returned when
 consumption is omitted. The price is the upstream normalized total in
 currency per kWh, not an independently reconstructed tariff.
+
+## Energy cost estimation contract
+
+`calculate_energy_cost(start, end, consumption_kwh, resolution="PT15M")`
+estimates electricity cost for uniform consumption over the requested period.
+`start` and `end` must be timezone-aware ISO 8601 datetimes with `end`
+strictly later than `start`; `consumption_kwh` must be finite and non-negative.
+The supported resolutions are `PT15M` and `PT60M`. The period may cover at
+most two consecutive Amsterdam calendar dates. Each relevant normalized
+electricity interval must have the requested resolution and provide continuous,
+non-overlapping coverage; missing data raises a safe MCP error instead of
+returning a partial cost.
+
+The response includes `start`, `end`, `resolution`, `consumption_kwh`,
+`average_total`, `estimated_cost`, `unit` (`kWh`), and
+`duration_seconds`. `average_total` is weighted by elapsed overlap seconds;
+`estimated_cost = average_total * consumption_kwh`. This assumes consumption
+is uniform in time. Negative prices are allowed. Timestamp comparisons use UTC
+instants and support Amsterdam DST transitions.
 
 ## Authentication and upstream access
 
