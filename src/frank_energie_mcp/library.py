@@ -496,16 +496,15 @@ class FrankEnergieService:
                 "schedule": [],
                 "estimated_cost": None,
             }
-        chosen.sort(key=lambda item: item["date_from"])
         remaining = required_grid_kwh
-        schedule: list[dict[str, Any]] = []
+        allocations: list[dict[str, Any]] = []
         estimated_cost = 0.0
-        for item in chosen:
+        for item in sorted(chosen, key=lambda entry: (entry["total"], entry["date_from"])):
             consumed = min(remaining, slot_kwh)
             remaining -= consumed
             cost = consumed * float(item["total"])
             estimated_cost += cost
-            schedule.append(
+            allocations.append(
                 {
                     "start": item["date_from"],
                     "end": item["date_till"],
@@ -514,6 +513,7 @@ class FrankEnergieService:
                     "estimated_cost": cost,
                 }
             )
+        schedule = sorted(allocations, key=lambda item: item["start"])
         return {
             "status": "ok",
             "resolution": resolution,
