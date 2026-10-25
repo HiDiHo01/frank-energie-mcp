@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Eleven read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Twelve read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -23,6 +23,7 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_lowest_price` | `get_lowest_price(day, resolution)` | Minimum total interval for each energy type, with coverage metadata. |
 | `get_highest_price` | `get_highest_price(day, resolution)` | Maximum total interval for each energy type, with coverage metadata. |
 | `get_lowest_period` | `get_lowest_period(period_minutes, day, resolution)` | Cheapest uninterrupted fixed-duration window for electricity and gas, selected by arithmetic mean of normalized `total`. |
+| `get_best_start_time` | `get_best_start_time(period_minutes, day, resolution, consumption_kwh)` | Cheapest contiguous electricity window and optional estimated energy cost. |
 | `get_highest_period` | `get_highest_period(period_minutes, day, resolution)` | Most expensive uninterrupted fixed-duration window, with the same response contract. |
 | `get_gas_price` | `get_gas_price(resolution)` | Normalized active gas interval or `null` |
 | `get_account` | `get_account()` | After a successful authenticated account request, returns only `{"authenticated": true}`; account details are deliberately not exposed |
@@ -127,6 +128,25 @@ independently. The tool may return a historical window earlier today;
 it does not filter to future intervals. Coverage status describes the
 whole day, not whether a matching period was found. DST days use elapsed
 UTC duration and never fabricate missing records.
+
+## Best start time contract
+
+`get_best_start_time` requires `period_minutes: int` and accepts optional
+`day` (Amsterdam calendar day, default today), `resolution` (default
+`PT15M`, also `PT60M`), and `consumption_kwh` (finite non-negative
+number). It delegates to the existing cheapest-period selection and uses
+**electricity only**. The full requested day is considered, including elapsed
+intervals; this is a day-wide optimum, not a guarantee of a future start.
+
+The response includes `date`, `resolution`, `period_minutes`, `start`,
+`end`, `average_total`, `unit`, `consumption_kwh`, `estimated_cost`,
+`available_interval_count`, `coverage_seconds`, `expected_seconds`,
+and `status`. Without a contiguous window, `start`, `end`,
+`average_total`, `unit`, and `estimated_cost` are null.
+`estimated_cost = average_total * consumption_kwh` assumes a constant
+consumption rate across the selected window; no estimate is returned when
+consumption is omitted. The price is the upstream normalized total in
+currency per kWh, not an independently reconstructed tariff.
 
 ## Authentication and upstream access
 
