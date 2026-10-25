@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
 from typing import Literal
+from unittest.mock import AsyncMock
 
 import pytest
 
