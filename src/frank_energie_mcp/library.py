@@ -438,16 +438,12 @@ class FrankEnergieService:
             }
         step_minutes = 15 if resolution == "PT15M" else 60
         total_grid_kwh = sum(float(item["grid_energy_kwh"]) for item in schedule)
-        negative_grid_kwh = sum(
-            float(item["grid_energy_kwh"])
-            for item in schedule
-            if float(item["price_per_kwh"]) < 0
-        )
-        negative_cost = sum(
-            float(item["estimated_cost"])
-            for item in schedule
-            if float(item["price_per_kwh"]) < 0
-        )
+        negative_grid_kwh = 0.0
+        negative_cost = 0.0
+        for slot in schedule:
+            if float(slot["price_per_kwh"]) < 0:
+                negative_grid_kwh += float(slot["grid_energy_kwh"])
+                negative_cost += float(slot["estimated_cost"])
         total_cost = float(plan["estimated_cost"])
         return {
             "status": "ok",
