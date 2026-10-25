@@ -42,7 +42,7 @@ FastMCP handlers -> minimal AccountResponse / SitesResponse
 | `tools/__init__.py` | Legacy package retained for import compatibility; tool implementations now live in `server.py` |
 | `models.py` | Legacy generic dataclasses; not the active price response contract |
 
-Separate `auth.py`, `config.py`, `resources/`, and `prompts/` implementations are not part of the current runtime architecture. Authentication and configuration are in `library.py`; the resource and prompt are registered in `server.py`.
+The unused `auth.py` and `config.py` placeholders were removed; authentication and configuration are implemented in `library.py`. The empty `resources/` and `prompts/` packages remain for compatibility; the active resource and prompt are registered in `server.py`.
 
 ## Responsibilities and boundaries
 
