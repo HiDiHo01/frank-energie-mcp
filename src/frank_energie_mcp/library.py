@@ -402,6 +402,66 @@ class FrankEnergieService:
         result["estimated_savings"] = best_savings
         return result
 
+    async def get_charging_cost_breakdown(
+        self,
+        energy_kwh: float,
+        max_power_kw: float,
+        start: datetime,
+        deadline: datetime,
+        efficiency: float = 1.0,
+        allow_interruptions: bool = True,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Summarize the cost and energy of an optimal published-price plan."""
+        plan = await self.get_optimal_charging_schedule(
+            energy_kwh=energy_kwh,
+            max_power_kw=max_power_kw,
+            start=start,
+            deadline=deadline,
+            efficiency=efficiency,
+            allow_interruptions=allow_interruptions,
+            resolution=resolution,
+        )
+        schedule = plan["schedule"]
+        if plan["status"] != "ok":
+            return {
+                "status": plan["status"],
+                "resolution": resolution,
+                "required_grid_kwh": plan["required_grid_kwh"],
+                "energy_loss_kwh": plan["required_grid_kwh"] - energy_kwh,
+                "total_charging_minutes": None,
+                "average_price_per_grid_kwh": None,
+                "negative_price_grid_kwh": None,
+                "negative_price_cost": None,
+                "estimated_cost": None,
+                "schedule": schedule,
+            }
+        step_minutes = 15 if resolution == "PT15M" else 60
+        total_grid_kwh = sum(float(item["grid_energy_kwh"]) for item in schedule)
+        negative_grid_kwh = sum(
+            float(item["grid_energy_kwh"])
+            for item in schedule
+            if float(item["price_per_kwh"]) < 0
+        )
+        negative_cost = sum(
+            float(item["estimated_cost"])
+            for item in schedule
+            if float(item["price_per_kwh"]) < 0
+        )
+        total_cost = float(plan["estimated_cost"])
+        return {
+            "status": "ok",
+            "resolution": resolution,
+            "required_grid_kwh": plan["required_grid_kwh"],
+            "energy_loss_kwh": plan["required_grid_kwh"] - energy_kwh,
+            "total_charging_minutes": len(schedule) * step_minutes,
+            "average_price_per_grid_kwh": total_cost / total_grid_kwh,
+            "negative_price_grid_kwh": negative_grid_kwh,
+            "negative_price_cost": negative_cost,
+            "estimated_cost": total_cost,
+            "schedule": schedule,
+        }
+
     async def get_charging_efficiency_analysis(
         self,
         energy_kwh: float,
