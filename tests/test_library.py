@@ -85,6 +85,7 @@ async def test_server_registers_tools_resources_and_prompts(
         "get_price_threshold_periods",
         "get_negative_price_periods",
         "get_price_trend",
+        "calculate_battery_savings",
         "get_price_volatility",
         "get_account",
         "list_sites",
