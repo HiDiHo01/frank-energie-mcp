@@ -62,9 +62,8 @@ async def test_missing_prices_do_not_invent_savings() -> None:
         deadline=datetime(2026, 6, 15, 2, tzinfo=UTC),
         resolution="PT60M",
     )
-    assert all(
-        plan["status"] == "insufficient_prices" for plan in result["strategies"].values()
-    )
+    statuses = [plan["status"] for plan in result["strategies"].values()]
+    assert statuses == ["insufficient_prices"] * 3
     assert all(
         comparison["saving_amount"] is None
         for comparison in result["savings_vs_immediate"].values()
