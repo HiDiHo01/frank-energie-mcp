@@ -51,7 +51,7 @@ Today and tomorrow use calendar dates in `Europe/Amsterdam`. The active interval
 - `unit`: optional upstream `per_unit` (preferred) or `unit`
 - `energy_type`: optional upstream energy type
 
-Intervals must have valid, ordered, timezone-aware timestamps and a finite numeric total. Full-day arrays must be lists with at most 200 entries **per energy type**; other shapes or oversized arrays raise an error. The implementation validates the serialized arrays in Pydantic JSON mode. Unknown upstream fields, including credentials, are excluded by explicit field selection.
+Intervals must have valid, ordered, timezone-aware timestamps and a finite numeric total. Ordering is evaluated by UTC instant, so intervals crossing the repeated local hour during the autumn daylight-saving transition are accepted only when the end instant is later than the start instant. Full-day arrays must be lists with at most 200 entries **per energy type**; other shapes or oversized arrays raise an error. The implementation validates the serialized arrays in Pydantic JSON mode. Unknown upstream fields, including credentials, are excluded by explicit field selection.
 
 There is no `status/source/data` response envelope. The account and site responses use separate minimal schemas in `server.py`. The 200-entry limit is a **defensive MCP response-size bound**, not an upstream API contract. Upstream `PriceResolution` supports `PT15M` and `PT60M`; for complete Europe/Amsterdam calendar days these imply 92/96/100 or 23/24/25 intervals respectively (spring DST/normal/autumn DST). Actual API responses may be incomplete, so these counts are not enforced. The 200-entry cap intentionally leaves headroom beyond a full day while rejecting unexpectedly large series.
 
