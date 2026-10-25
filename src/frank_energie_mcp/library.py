@@ -857,6 +857,7 @@ def _statistics_series(intervals: list[dict[str, Any]], day: date) -> dict[str, 
         / total_seconds
     )
     ordered = sorted(observations)
+
     def percentile(fraction: float) -> float:
         """Return duration-weighted nearest-rank percentile."""
         threshold = fraction * total_seconds
