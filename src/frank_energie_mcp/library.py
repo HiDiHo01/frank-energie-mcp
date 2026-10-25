@@ -581,6 +581,95 @@ class FrankEnergieService:
             "power_levels": results,
         }
 
+    async def get_charging_start_time_analysis(
+        self,
+        energy_kwh: float,
+        max_power_kw: float,
+        starts: list[datetime],
+        deadline: datetime,
+        efficiency: float = 1.0,
+        allow_interruptions: bool = True,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Compare optimal charging costs for different permitted start times."""
+        if not isinstance(starts, list) or not 1 <= len(starts) <= 12:
+            raise ValueError("starts must contain between 1 and 12 timestamps.")
+        if not isinstance(deadline, datetime) or deadline.tzinfo is None:
+            raise ValueError("deadline must be timezone-aware.")
+        if deadline.utcoffset() is None:
+            raise ValueError("deadline must be timezone-aware.")
+        finish = deadline.astimezone(UTC)
+        instants: list[datetime] = []
+        for start in starts:
+            if not isinstance(start, datetime) or start.tzinfo is None:
+                raise ValueError("All starts must be timezone-aware datetimes.")
+            if start.utcoffset() is None:
+                raise ValueError("All starts must be timezone-aware datetimes.")
+            begin = start.astimezone(UTC)
+            if not begin < finish <= begin + timedelta(hours=48):
+                raise ValueError("Each start must precede deadline by at most 48 hours.")
+            instants.append(begin)
+        if len(set(instants)) != len(instants):
+            raise ValueError("starts must be unique instants.")
+        results: list[dict[str, Any]] = []
+        for start in starts:
+            plan = await self.get_optimal_charging_schedule(
+                energy_kwh=energy_kwh,
+                max_power_kw=max_power_kw,
+                start=start,
+                deadline=deadline,
+                efficiency=efficiency,
+                allow_interruptions=allow_interruptions,
+                resolution=resolution,
+            )
+            feasible = plan["status"] == "ok"
+            results.append(
+                {
+                    "start": start.isoformat(),
+                    "status": plan["status"],
+                    "required_grid_kwh": plan["required_grid_kwh"],
+                    "required_slot_count": plan["required_slot_count"],
+                    "charging_duration_minutes": (
+                        len(plan["schedule"]) * (15 if resolution == "PT15M" else 60)
+                        if feasible
+                        else None
+                    ),
+                    "estimated_cost": plan["estimated_cost"] if feasible else None,
+                    "schedule": plan["schedule"],
+                }
+            )
+        feasible_costs = [
+            float(item["estimated_cost"])
+            for item in results
+            if item["status"] == "ok" and item["estimated_cost"] is not None
+        ]
+        cheapest = min(feasible_costs) if feasible_costs else None
+        most_expensive = max(feasible_costs) if feasible_costs else None
+        for item in results:
+            cost = item["estimated_cost"]
+            item["savings_vs_most_expensive"] = (
+                most_expensive - float(cost)
+                if cost is not None and most_expensive is not None
+                else None
+            )
+        cheapest_start = next(
+            (
+                item["start"]
+                for item in results
+                if cheapest is not None and item["estimated_cost"] == cheapest
+            ),
+            None,
+        )
+        return {
+            "resolution": resolution,
+            "deadline": deadline.isoformat(),
+            "allow_interruptions": allow_interruptions,
+            "lowest_estimated_cost": cheapest,
+            "highest_estimated_cost": most_expensive,
+            "cheapest_start": cheapest_start,
+            "starts": results,
+        }
+
     async def get_charging_deadline_analysis(
         self,
         energy_kwh: float,
