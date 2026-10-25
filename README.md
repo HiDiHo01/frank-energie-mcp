@@ -230,3 +230,7 @@ Call `get_price_trend(day=None, resolution="PT15M")` to compare the first and la
 ## Daily price volatility
 
 Use `get_price_volatility(day=None, resolution="PT15M")` for per-energy all-in price spread, population standard deviation, and mean absolute change between contiguous intervals. Missing intervals are not bridged; the response includes coverage status and the number of adjacent pairs.
+
+## Compare calendar days
+
+Use `compare_days(first_day, second_day, resolution="PT15M")` to compare observed average, minimum and maximum normalized all-in electricity and gas prices. Absolute and percentage differences are relative to the first day; percentages are null for a zero baseline. Both days retain separate DST-aware coverage and completeness metadata.
