@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Twenty-four read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Twenty-five read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -245,3 +245,7 @@ The test suite covers service delegation, upstream call signatures, session clea
 ### `compare_charging_strategies`
 
 `compare_charging_strategies(energy_kwh, max_power_kw, start, deadline, efficiency=1.0, resolution="PT15M")` compares immediate charging (earliest full-price slots), the cheapest contiguous schedule, and the cheapest interruptible schedule. All three delegate to `get_optimal_charging_schedule`, using the same fixed-power model, published all-in electricity prices and timezone-aware bounds. The response includes each plan, its cost or null for insufficient data, and absolute/percentage savings versus immediate charging. Savings percentages use the absolute baseline cost as denominator and are null if baseline is zero or missing. An immediate schedule that cannot finish by the deadline is unavailable. This is a planning tool, not a charger-control service.
+
+### `get_charging_deadline_analysis`
+
+`get_charging_deadline_analysis(energy_kwh, max_power_kw, start, deadlines, efficiency=1.0, allow_interruptions=true, resolution="PT15M")` compares the existing fixed-power charging planner for 1–12 unique, timezone-aware deadlines, each within 48 hours of the start. Results preserve the caller's deadline order and include each deadline's status, estimated cost, schedule and extra cost versus the lowest available cost. If no deadline is feasible with published prices, the lowest cost and all differences are null. A missing-price schedule is not estimated. No charger commands are issued.
