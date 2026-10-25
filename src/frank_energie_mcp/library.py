@@ -159,6 +159,84 @@ class FrankEnergieService:
             }
         return result
 
+    async def get_price_threshold_periods(
+        self,
+        threshold: float,
+        comparison: Literal["below", "above"] = "below",
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Group strictly adjacent electricity intervals matching a price threshold."""
+        if (
+            isinstance(threshold, bool)
+            or not isinstance(threshold, (int, float))
+            or not math.isfinite(threshold)
+        ):
+            raise ValueError("threshold must be a finite number.")
+        if comparison not in ("below", "above"):
+            raise ValueError("comparison must be below or above.")
+        if resolution not in ("PT15M", "PT60M"):
+            raise ValueError("Unsupported price resolution.")
+        requested_day = day or datetime.now(ZoneInfo("Europe/Amsterdam")).date()
+        async with self.bridge.session() as client:
+            prices = await client.prices(requested_day, resolution=resolution)
+        normalized = normalize_market_prices(prices)
+        step_seconds = {"PT15M": 900, "PT60M": 3600}[resolution]
+        result: dict[str, Any] = {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+            "threshold": float(threshold),
+            "comparison": comparison,
+        }
+        for energy in ("electricity", "gas"):
+            intervals = normalized[energy]
+            coverage = _average_series(intervals, requested_day)
+            groups: list[dict[str, Any]] = []
+            current: list[dict[str, Any]] = []
+
+            def flush() -> None:
+                """Finalize the current uninterrupted matching group."""
+                if not current:
+                    return
+                groups.append(
+                    {
+                        "start": current[0]["date_from"],
+                        "end": current[-1]["date_till"],
+                        "duration_minutes": len(current) * step_seconds // 60,
+                        "interval_count": len(current),
+                        "average_total": sum(item["total"] for item in current) / len(current),
+                        "unit": current[0]["unit"],
+                    }
+                )
+                current.clear()
+
+            for entry in sorted(intervals, key=lambda item: item["date_from"]):
+                start = datetime.fromisoformat(entry["date_from"]).astimezone(UTC)
+                end = datetime.fromisoformat(entry["date_till"]).astimezone(UTC)
+                matches = (
+                    entry["total"] < threshold
+                    if comparison == "below"
+                    else entry["total"] > threshold
+                )
+                if not matches or (end - start).total_seconds() != step_seconds:
+                    flush()
+                    continue
+                if current and datetime.fromisoformat(current[-1]["date_till"]).astimezone(
+                    UTC
+                ) != start:
+                    flush()
+                current.append(entry)
+            flush()
+            result[energy] = {
+                "periods": groups,
+                "matching_interval_count": sum(group["interval_count"] for group in groups),
+                "interval_count": coverage["interval_count"],
+                "coverage_seconds": coverage["coverage_seconds"],
+                "expected_seconds": coverage["expected_seconds"],
+                "status": coverage["status"],
+            }
+        return result
+
     async def get_lowest_period(
         self,
         period_minutes: int,
