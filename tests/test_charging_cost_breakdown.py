@@ -38,9 +38,7 @@ def _service(prices: list[float], minutes: int) -> FrankEnergieService:
     "minutes,resolution",
     [(15, "PT15M"), (60, "PT60M")],
 )
-async def test_breakdown_with_negative_prices_and_losses(
-    minutes: int, resolution: str
-) -> None:
+async def test_breakdown_with_negative_prices_and_losses(minutes: int, resolution: str) -> None:
     service = _service([-0.2, 0.1, 0.3, 0.4], minutes)
     first = datetime(2026, 6, 14, 22, tzinfo=UTC)
     result = await service.get_charging_cost_breakdown(
