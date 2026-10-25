@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Twenty-three read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Twenty-four read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -241,3 +241,7 @@ The test suite covers service delegation, upstream call signatures, session clea
 ### `get_optimal_charging_schedule`
 
 `get_optimal_charging_schedule(energy_kwh, max_power_kw, start, deadline, efficiency=1.0, allow_interruptions=true, resolution="PT15M")` calculates a fixed-power, least-cost charging schedule using only published all-in electricity prices. `start` and `deadline` must be timezone-aware datetimes, with a positive window of at most 48 hours. Energy is delivered energy (kWh), max power is grid draw (kW), and efficiency is in (0, 1]. The planner selects full resolution-sized price slots wholly inside the window, with a possible partial-energy final slot, without inferring missing prices. Interruptible schedules select the cheapest slots; uninterrupted schedules select the cheapest contiguous block. Returns `status=insufficient_prices` with a null cost and empty schedule if the required slots cannot be scheduled. A fixed maximum charging power is assumed; partial-energy slots are costed proportionally but represented with full slot start/end bounds. The result is a price optimization, not a command to a charger.
+
+### `compare_charging_strategies`
+
+`compare_charging_strategies(energy_kwh, max_power_kw, start, deadline, efficiency=1.0, resolution="PT15M")` compares immediate charging (earliest full-price slots), the cheapest contiguous schedule, and the cheapest interruptible schedule. All three delegate to `get_optimal_charging_schedule`, using the same fixed-power model, published all-in electricity prices and timezone-aware bounds. The response includes each plan, its cost or null for insufficient data, and absolute/percentage savings versus immediate charging. Savings percentages use the absolute baseline cost as denominator and are null if baseline is zero or missing. An immediate schedule that cannot finish by the deadline is unavailable. This is a planning tool, not a charger-control service.
