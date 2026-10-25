@@ -131,6 +131,24 @@ filled. The search uses the entire requested calendar day and does not
 restrict today's result to future intervals. Equal averages prefer the
 earliest window. See [MCP_SPEC.md](MCP_SPEC.md).
 
+## Electricity cost estimation
+
+`calculate_energy_cost` estimates cost from the normalized total electricity
+price for a requested fully covered time interval. Example arguments:
+
+```json
+{
+  "start": "2026-06-15T00:00:00+02:00",
+  "end": "2026-06-15T02:00:00+02:00",
+  "consumption_kwh": 2.0,
+  "resolution": "PT15M"
+}
+```
+
+The tool weights partial price intervals by elapsed seconds and assumes a
+constant rate of energy consumption. It rejects missing or overlapping
+price coverage, and supports at most two consecutive Amsterdam dates.
+
 ## Best electricity start time
 
 `get_best_start_time` accepts `period_minutes`, optional `day` and
