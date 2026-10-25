@@ -218,3 +218,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md), [MCP_SPEC.md](MCP_SPEC.md), [AI_POLICY.m
 ## Price threshold periods
 
 Use `get_price_threshold_periods` to find contiguous intervals where electricity or gas normalized total prices are strictly `below` or `above` a finite threshold. Example: `threshold=0.0`, `comparison="below"`, `resolution="PT15M"` finds negative-price windows. Missing price bins do not join separate periods.
+
+## Negative price periods
+
+Use `get_negative_price_periods(day=None, resolution="PT15M")` to identify consecutive periods with a strictly negative normalized total price for electricity and gas. Zero-price bins and missing intervals do not count as negative. The tool reuses the existing threshold analyzer and supports `PT15M` and `PT60M`.
