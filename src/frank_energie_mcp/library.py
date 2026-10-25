@@ -402,6 +402,25 @@ class FrankEnergieService:
         result["estimated_savings"] = best_savings
         return result
 
+    async def get_price_statistics(
+        self,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Summarize observed daily all-in prices using duration-weighted statistics."""
+        if resolution not in ("PT15M", "PT60M"):
+            raise ValueError("Unsupported price resolution.")
+        requested_day = day or datetime.now(ZoneInfo("Europe/Amsterdam")).date()
+        async with self.bridge.session() as client:
+            prices = await client.prices(requested_day, resolution=resolution)
+        normalized = normalize_market_prices(prices)
+        return {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+            "electricity": _statistics_series(normalized["electricity"], requested_day),
+            "gas": _statistics_series(normalized["gas"], requested_day),
+        }
+
     async def get_price_volatility(
         self,
         day: date | None = None,
@@ -793,6 +812,74 @@ def _comparison_summary(intervals: list[dict[str, Any]], day: date) -> dict[str,
         "maximum_total": max(totals) if totals else None,
         "unit": intervals[0]["unit"] if intervals else None,
     }
+
+
+def _statistics_series(intervals: list[dict[str, Any]], day: date) -> dict[str, Any]:
+    """Compute duration-weighted population statistics for observed all-in prices."""
+    coverage = _average_series(intervals, day)
+    observations: list[tuple[float, float]] = []
+    for interval in intervals:
+        start = datetime.fromisoformat(interval["date_from"]).astimezone(UTC)
+        end = datetime.fromisoformat(interval["date_till"]).astimezone(UTC)
+        observations.append((float(interval["total"]), (end - start).total_seconds()))
+    total_seconds = sum(duration for _, duration in observations)
+    result: dict[str, Any] = {
+        "interval_count": coverage["interval_count"],
+        "coverage_seconds": coverage["coverage_seconds"],
+        "expected_seconds": coverage["expected_seconds"],
+        "coverage_status": coverage["status"],
+        "complete": coverage["complete"],
+        "unit": intervals[0]["unit"] if intervals else None,
+        "negative_interval_count": sum(value < 0 for value, _ in observations),
+        "zero_interval_count": sum(value == 0 for value, _ in observations),
+        "negative_duration_seconds": int(
+            sum(duration for value, duration in observations if value < 0)
+        ),
+        "zero_duration_seconds": int(
+            sum(duration for value, duration in observations if value == 0)
+        ),
+        "mean": None,
+        "minimum": None,
+        "maximum": None,
+        "median": None,
+        "variance": None,
+        "standard_deviation": None,
+        "p10": None,
+        "p25": None,
+        "p75": None,
+        "p90": None,
+    }
+    if not observations:
+        return result
+    mean = sum(value * duration for value, duration in observations) / total_seconds
+    variance = (
+        sum(duration * (value - mean) ** 2 for value, duration in observations)
+        / total_seconds
+    )
+    ordered = sorted(observations)
+    def percentile(fraction: float) -> float:
+        """Return duration-weighted nearest-rank percentile."""
+        threshold = fraction * total_seconds
+        cumulative = 0.0
+        for value, duration in ordered:
+            cumulative += duration
+            if cumulative >= threshold:
+                return value
+        return ordered[-1][0]
+
+    result.update(
+        mean=mean,
+        minimum=ordered[0][0],
+        maximum=ordered[-1][0],
+        median=percentile(0.5),
+        variance=variance,
+        standard_deviation=math.sqrt(variance),
+        p10=percentile(0.1),
+        p25=percentile(0.25),
+        p75=percentile(0.75),
+        p90=percentile(0.9),
+    )
+    return result
 
 
 def _average_series(intervals: list[dict[str, Any]], day: date) -> dict[str, Any]:
