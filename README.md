@@ -238,3 +238,7 @@ Use `compare_days(first_day, second_day, resolution="PT15M")` to compare observe
 ## Cheapest split periods
 
 Call `get_best_split_periods(total_duration_minutes=240, block_duration_minutes=60, day=..., resolution="PT15M")` to find the globally cheapest non-overlapping blocks, which need not be adjacent. Results include block times, mean all-in prices, availability and DST-aware coverage. The reported `total_cost_per_unit` assumes a constant load of one unit per hour; actual appliance costs depend on consumption.
+
+## Battery savings (single-cycle estimate)
+
+Use `calculate_battery_savings(capacity_kwh=1, charge_power_kw=4, discharge_power_kw=4, charge_efficiency=0.95, discharge_efficiency=0.95)` to estimate a profitable charge-then-discharge cycle using public all-in electricity prices. This is **not** a multi-interval battery scheduling model: each phase fits within one price interval. The calculation assumes enough local demand to use discharged energy, excludes export payments and battery wear, and returns no estimate when daily prices are incomplete.
