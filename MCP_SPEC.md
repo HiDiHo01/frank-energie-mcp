@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Twenty-two read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Twenty-three read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -237,3 +237,7 @@ The test suite covers service delegation, upstream call signatures, session clea
 ### `get_price_forecast_summary`
 
 `get_price_forecast_summary(day=None, resolution="PT15M", period_minutes=60)` fetches public all-in electricity and gas prices for the requested Amsterdam calendar day (default: today) and its following day (tomorrow). For each energy type it returns the observed average, minimum, maximum, interval count, DST-aware coverage status and seconds, and cheapest/dearest **contiguous** windows of the requested duration. `average_difference` is tomorrow minus today and is null if either has no data. Missing tomorrow prices are marked empty, never predicted or filled. `period_minutes` must be a positive multiple of the selected resolution (15 or 60 minutes), up to 1500 minutes. Windows require uninterrupted, resolution-sized intervals; incomplete days remain marked incomplete.
+
+### `get_optimal_charging_schedule`
+
+`get_optimal_charging_schedule(energy_kwh, max_power_kw, start, deadline, efficiency=1.0, allow_interruptions=true, resolution="PT15M")` calculates a fixed-power, least-cost charging schedule using only published all-in electricity prices. `start` and `deadline` must be timezone-aware datetimes, with a positive window of at most 48 hours. Energy is delivered energy (kWh), max power is grid draw (kW), and efficiency is in (0, 1]. The planner selects full resolution-sized price slots wholly inside the window, with a possible partial-energy final slot, without inferring missing prices. Interruptible schedules select the cheapest slots; uninterrupted schedules select the cheapest contiguous block. Returns `status=insufficient_prices` with a null cost and empty schedule if the required slots cannot be scheduled. A fixed maximum charging power is assumed; partial-energy slots are costed proportionally but represented with full slot start/end bounds. The result is a price optimization, not a command to a charger.
