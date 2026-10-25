@@ -280,6 +280,56 @@ class FrankEnergieService:
             }
         return result
 
+    async def get_price_volatility(
+        self,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Calculate population volatility metrics for daily all-in prices."""
+        if resolution not in ("PT15M", "PT60M"):
+            raise ValueError("Unsupported price resolution.")
+        requested_day = day or datetime.now(ZoneInfo("Europe/Amsterdam")).date()
+        async with self.bridge.session() as client:
+            prices = await client.prices(requested_day, resolution=resolution)
+        normalized = normalize_market_prices(prices)
+        result: dict[str, Any] = {
+            "date": requested_day.isoformat(),
+            "resolution": resolution,
+        }
+        for energy in ("electricity", "gas"):
+            intervals = sorted(normalized[energy], key=lambda entry: entry["date_from"])
+            coverage = _average_series(intervals, requested_day)
+            totals = [float(entry["total"]) for entry in intervals]
+            average = coverage["average_total"]
+            spread = max(totals) - min(totals) if totals else None
+            deviation = (
+                math.sqrt(sum((value - average) ** 2 for value in totals) / len(totals))
+                if totals and average is not None
+                else None
+            )
+            adjacent_changes = [
+                abs(totals[index + 1] - totals[index])
+                for index in range(len(totals) - 1)
+                if intervals[index]["date_till"] == intervals[index + 1]["date_from"]
+            ]
+            result[energy] = {
+                "average_total": average,
+                "spread": spread,
+                "standard_deviation": deviation,
+                "mean_absolute_change": (
+                    sum(adjacent_changes) / len(adjacent_changes)
+                    if adjacent_changes
+                    else None
+                ),
+                "adjacent_pair_count": len(adjacent_changes),
+                "unit": intervals[0]["unit"] if intervals else None,
+                "interval_count": coverage["interval_count"],
+                "coverage_seconds": coverage["coverage_seconds"],
+                "expected_seconds": coverage["expected_seconds"],
+                "status": coverage["status"],
+            }
+        return result
+
     async def get_lowest_period(
         self,
         period_minutes: int,
