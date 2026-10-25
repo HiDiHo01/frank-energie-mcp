@@ -24,6 +24,7 @@ async def test_register_tools_populates_all_tools() -> None:
         "get_price_threshold_periods",
         "get_negative_price_periods",
         "get_price_trend",
+        "calculate_battery_savings",
         "get_price_volatility",
         "get_highest_price",
         "get_best_split_periods",
