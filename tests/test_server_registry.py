@@ -20,6 +20,7 @@ async def test_register_tools_populates_all_tools() -> None:
         "get_highest_period",
         "get_best_start_time",
         "calculate_energy_cost",
+        "get_price_threshold_periods",
         "get_highest_price",
         "get_lowest_period",
         "get_lowest_price",
