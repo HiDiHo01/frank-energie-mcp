@@ -194,22 +194,6 @@ class FrankEnergieService:
             groups: list[dict[str, Any]] = []
             current: list[dict[str, Any]] = []
 
-            def flush() -> None:
-                """Finalize the current uninterrupted matching group."""
-                if not current:
-                    return
-                groups.append(
-                    {
-                        "start": current[0]["date_from"],
-                        "end": current[-1]["date_till"],
-                        "duration_minutes": len(current) * step_seconds // 60,
-                        "interval_count": len(current),
-                        "average_total": sum(item["total"] for item in current) / len(current),
-                        "unit": current[0]["unit"],
-                    }
-                )
-                current.clear()
-
             for entry in sorted(intervals, key=lambda item: item["date_from"]):
                 start = datetime.fromisoformat(entry["date_from"]).astimezone(UTC)
                 end = datetime.fromisoformat(entry["date_till"]).astimezone(UTC)
@@ -219,14 +203,18 @@ class FrankEnergieService:
                     else entry["total"] > threshold
                 )
                 if not matches or (end - start).total_seconds() != step_seconds:
-                    flush()
+                    if current:
+                        groups.append(_threshold_period(current))
+                        current = []
                     continue
                 if current and datetime.fromisoformat(current[-1]["date_till"]).astimezone(
                     UTC
                 ) != start:
-                    flush()
+                    groups.append(_threshold_period(current))
+                    current = []
                 current.append(entry)
-            flush()
+            if current:
+                groups.append(_threshold_period(current))
             result[energy] = {
                 "periods": groups,
                 "matching_interval_count": sum(group["interval_count"] for group in groups),
@@ -432,6 +420,20 @@ class FrankEnergieService:
             raise RuntimeError("Site access requires Frank Energie credentials.")
         async with self.bridge.session() as client:
             return await client.UserSites()
+
+
+def _threshold_period(intervals: list[dict[str, Any]]) -> dict[str, Any]:
+    """Summarize one validated, uninterrupted group of matching price intervals."""
+    start = datetime.fromisoformat(intervals[0]["date_from"]).astimezone(UTC)
+    end = datetime.fromisoformat(intervals[-1]["date_till"]).astimezone(UTC)
+    return {
+        "start": intervals[0]["date_from"],
+        "end": intervals[-1]["date_till"],
+        "duration_minutes": int((end - start).total_seconds() // 60),
+        "interval_count": len(intervals),
+        "average_total": sum(item["total"] for item in intervals) / len(intervals),
+        "unit": intervals[0]["unit"],
+    }
 
 
 def _average_series(intervals: list[dict[str, Any]], day: date) -> dict[str, Any]:
