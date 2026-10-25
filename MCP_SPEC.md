@@ -2,7 +2,7 @@
 
 ## Implementation status
 
-The server uses the official Python MCP SDK's FastMCP runtime. Sixteen read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
+The server uses the official Python MCP SDK's FastMCP runtime. Seventeen read-only asynchronous tools, one static resource, and one static prompt are registered. The interface remains under development and is not yet production-ready.
 
 ## Transports
 
@@ -23,6 +23,7 @@ All price tools accept an optional `resolution` parameter: `PT15M` (default) or 
 | `get_lowest_price` | `get_lowest_price(day, resolution)` | Minimum total interval for each energy type, with coverage metadata. |
 | `get_highest_price` | `get_highest_price(day, resolution)` | Maximum total interval for each energy type, with coverage metadata. |
 | `get_lowest_period` | `get_lowest_period(period_minutes, day, resolution)` | Cheapest uninterrupted fixed-duration window for electricity and gas, selected by arithmetic mean of normalized `total`. |
+| `get_price_volatility` | `get_price_volatility(day, resolution)` | Per-energy all-in price spread, population standard deviation, and mean absolute change across only contiguous intervals, with coverage metadata. |
 | `get_price_trend` | `get_price_trend(day, resolution)` | Per-energy first-to-last normalized total-price change, rising/falling/stable/unknown direction, and daily coverage metadata. |
 | `get_negative_price_periods` | `get_negative_price_periods(day, resolution)` | Convenience wrapper for strict negative total-price intervals, returning the threshold-period response for electricity and gas. |
 | `get_price_threshold_periods` | `get_price_threshold_periods(threshold, comparison, day, resolution)` | Consecutive electricity and gas price intervals strictly below or above a finite threshold, with coverage metadata. |
@@ -217,3 +218,5 @@ The test suite covers service delegation, upstream call signatures, session clea
 `get_negative_price_periods` delegates to `get_price_threshold_periods(threshold=0.0, comparison="below")`. Zero-price intervals are excluded; the returned date, resolution, coverage metadata, and period fields use the same contract. It requires no credentials and does not perform an additional API request.
 
 `get_price_trend` compares the earliest and latest available normalized total-price intervals for the selected local date. Equal values are `stable`; one or zero intervals yield `unknown`. The tool reports coverage separately and does not infer missing prices or forecast beyond the selected day.
+
+`get_price_volatility` calculates the population standard deviation of observed normalized total prices. The mean absolute change excludes pairs separated by missing intervals. A single interval yields zero spread/deviation but no adjacent-change estimate; empty datasets return null metrics. Coverage is reported separately, without imputing missing intervals.
