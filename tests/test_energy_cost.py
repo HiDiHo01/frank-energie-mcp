@@ -41,8 +41,8 @@ async def test_cost_weights_partial_intervals_by_elapsed_seconds(step: int) -> N
     entries = [_record(start, step, 0.1), _record(start + timedelta(minutes=step), step, 0.3)]
     service, client = _service(entries)
     result = await service.calculate_energy_cost(
-        start + timedelta(minutes=step // 2),
-        start + timedelta(minutes=step + step // 2),
+        start + timedelta(seconds=step * 30),
+        start + timedelta(seconds=step * 90),
         2.0,
         "PT15M" if step == 15 else "PT60M",
     )
