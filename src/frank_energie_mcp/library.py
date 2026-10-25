@@ -402,6 +402,68 @@ class FrankEnergieService:
         result["estimated_savings"] = best_savings
         return result
 
+    async def get_charging_efficiency_analysis(
+        self,
+        energy_kwh: float,
+        max_power_kw: float,
+        start: datetime,
+        deadline: datetime,
+        efficiencies: list[float],
+        allow_interruptions: bool = True,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Compare charging losses and costs across charging efficiencies."""
+        if not isinstance(efficiencies, list) or not 1 <= len(efficiencies) <= 12:
+            raise ValueError("efficiencies must contain between 1 and 12 values.")
+        for efficiency in efficiencies:
+            if (
+                isinstance(efficiency, bool)
+                or not isinstance(efficiency, (int, float))
+                or not math.isfinite(efficiency)
+                or not 0 < efficiency <= 1
+            ):
+                raise ValueError("Each efficiency must be finite and within (0, 1].")
+        if len(set(efficiencies)) != len(efficiencies):
+            raise ValueError("Charging efficiencies must be unique.")
+        results: list[dict[str, Any]] = []
+        for efficiency in efficiencies:
+            plan = await self.get_optimal_charging_schedule(
+                energy_kwh=energy_kwh,
+                max_power_kw=max_power_kw,
+                start=start,
+                deadline=deadline,
+                efficiency=float(efficiency),
+                allow_interruptions=allow_interruptions,
+                resolution=resolution,
+            )
+            results.append(
+                {
+                    "efficiency": float(efficiency),
+                    "status": plan["status"],
+                    "required_grid_kwh": plan["required_grid_kwh"],
+                    "energy_loss_kwh": plan["required_grid_kwh"] - energy_kwh,
+                    "required_slot_count": plan["required_slot_count"],
+                    "schedule": plan["schedule"],
+                    "estimated_cost": plan["estimated_cost"],
+                }
+            )
+        available: list[float] = []
+        for result_entry in results:
+            if result_entry["estimated_cost"] is not None:
+                available.append(float(result_entry["estimated_cost"]))
+        cheapest = min(available) if available else None
+        for result_entry in results:
+            cost = result_entry["estimated_cost"]
+            result_entry["additional_cost_vs_cheapest"] = (
+                float(cost) - cheapest if cost is not None and cheapest is not None else None
+            )
+        return {
+            "resolution": resolution,
+            "allow_interruptions": allow_interruptions,
+            "lowest_estimated_cost": cheapest,
+            "efficiencies": results,
+        }
+
     async def get_charging_power_analysis(
         self,
         energy_kwh: float,
