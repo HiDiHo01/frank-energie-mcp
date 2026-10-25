@@ -402,6 +402,91 @@ class FrankEnergieService:
         result["estimated_savings"] = best_savings
         return result
 
+    async def compare_charging_strategies(
+        self,
+        energy_kwh: float,
+        max_power_kw: float,
+        start: datetime,
+        deadline: datetime,
+        efficiency: float = 1.0,
+        resolution: PriceResolution = "PT15M",
+    ) -> dict[str, Any]:
+        """Compare immediate, contiguous and interruptible charging plans."""
+        if start.tzinfo is None or deadline.tzinfo is None:
+            raise ValueError("start and deadline must be timezone-aware.")
+        step_seconds = 900 if resolution == "PT15M" else 3600
+        if resolution not in ("PT15M", "PT60M"):
+            raise ValueError("Unsupported price resolution.")
+        # Validate energy and power before deriving the immediate deadline.
+        for name, value in (
+            ("energy_kwh", energy_kwh),
+            ("max_power_kw", max_power_kw),
+            ("efficiency", efficiency),
+        ):
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValueError(f"{name} must be a positive finite number.")
+            if not math.isfinite(value) or value <= 0:
+                raise ValueError(f"{name} must be a positive finite number.")
+        if efficiency > 1:
+            raise ValueError("efficiency must be at most 1.")
+        if deadline.astimezone(UTC) <= start.astimezone(UTC):
+            raise ValueError("deadline must be after start.")
+        required_slots = math.ceil(
+            energy_kwh / efficiency / (max_power_kw * step_seconds / 3600) - 1e-12
+        )
+        immediate_deadline = start.astimezone(UTC) + timedelta(
+            seconds=required_slots * step_seconds
+        )
+        common = {
+            "energy_kwh": energy_kwh,
+            "max_power_kw": max_power_kw,
+            "start": start,
+            "efficiency": efficiency,
+            "resolution": resolution,
+        }
+        # Reuse the published-price planner; never substitute missing prices.
+        contiguous = await self.get_optimal_charging_schedule(
+            **common, deadline=deadline, allow_interruptions=False
+        )
+        interruptible = await self.get_optimal_charging_schedule(
+            **common, deadline=deadline, allow_interruptions=True
+        )
+        if immediate_deadline <= deadline.astimezone(UTC):
+            immediate = await self.get_optimal_charging_schedule(
+                **common,
+                deadline=immediate_deadline,
+                allow_interruptions=False,
+            )
+        else:
+            immediate = {
+                "status": "insufficient_prices",
+                "estimated_cost": None,
+                "schedule": [],
+            }
+        strategies = {
+            "immediate": immediate,
+            "cheapest_contiguous": contiguous,
+            "cheapest_interruptible": interruptible,
+        }
+        baseline = immediate["estimated_cost"]
+        comparisons: dict[str, dict[str, float | None]] = {}
+        for name, plan in strategies.items():
+            cost = plan["estimated_cost"]
+            saving = baseline - cost if baseline is not None and cost is not None else None
+            comparisons[name] = {
+                "saving_amount": saving,
+                "saving_percent": (
+                    saving / abs(baseline) * 100
+                    if saving is not None and baseline != 0
+                    else None
+                ),
+            }
+        return {
+            "resolution": resolution,
+            "strategies": strategies,
+            "savings_vs_immediate": comparisons,
+        }
+
     async def get_optimal_charging_schedule(
         self,
         energy_kwh: float,
