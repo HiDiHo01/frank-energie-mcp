@@ -1,4 +1,11 @@
-# Roadmap
+# Roadmap (historical planning notes)
+
+> **Historical roadmap.** These phases describe early plans and are not a
+> statement of implemented functionality or current priorities. See
+> [../README.md](../README.md) for implemented capabilities,
+> [../MCP_SPEC.md](../MCP_SPEC.md) for current contracts, and
+> [../ARCHITECTURE.md](../ARCHITECTURE.md) for active modules.
+> Do not infer that a feature exists merely because it is listed below.
 
 ## Phase 1: Foundation
 
