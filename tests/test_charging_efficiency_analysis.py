@@ -47,9 +47,8 @@ async def test_efficiency_changes_grid_energy_and_cost() -> None:
     )
     scenarios = result["efficiencies"]
     assert [item["efficiency"] for item in scenarios] == [1.0, 0.8]
-    assert [item["required_grid_kwh"] for item in scenarios] == pytest.approx(
-        [2.0, 2.5]
-    )
+    grid_energy = [item["required_grid_kwh"] for item in scenarios]
+    assert grid_energy == pytest.approx([2.0, 2.5])
     losses = [item["energy_loss_kwh"] for item in scenarios]
     assert losses == pytest.approx([0.0, 0.5])
     costs = [item["estimated_cost"] for item in scenarios]
