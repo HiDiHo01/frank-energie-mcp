@@ -38,10 +38,10 @@ async def test_price_trend_directions(
 ) -> None:
     """A daily trend compares the first and last chronological total prices."""
     start = datetime(2026, 6, 14, 22, tzinfo=UTC)
-    entries = [
-        _record(start + timedelta(minutes=i * 15), 15, price)
-        for i, price in enumerate(prices)
-    ]
+    entries = []
+    for index, price in enumerate(prices):
+        interval_start = start + timedelta(minutes=index * 15)
+        entries.append(_record(interval_start, 15, price))
     client = AsyncMock()
     client.prices.return_value = SimpleNamespace(
         electricity=SimpleNamespace(price_data=list(reversed(entries))),
