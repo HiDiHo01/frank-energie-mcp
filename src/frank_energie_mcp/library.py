@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
@@ -166,6 +167,45 @@ class FrankEnergieService:
     ) -> dict[str, Any]:
         """Find the cheapest uninterrupted period by average total price."""
         return await self._get_extreme_period(period_minutes, day, resolution, highest=False)
+
+    async def get_best_start_time(
+        self,
+        period_minutes: int,
+        day: date | None = None,
+        resolution: PriceResolution = "PT15M",
+        consumption_kwh: float | None = None,
+    ) -> dict[str, Any]:
+        """Find the cheapest electricity start time for a fixed-duration load."""
+        if consumption_kwh is not None:
+            if (
+                isinstance(consumption_kwh, bool)
+                or not isinstance(consumption_kwh, (int, float))
+                or not math.isfinite(consumption_kwh)
+                or consumption_kwh < 0
+            ):
+                raise ValueError("consumption_kwh must be a finite non-negative number.")
+        result = await self.get_lowest_period(period_minutes, day, resolution)
+        electricity = result["electricity"]
+        period = electricity["period"]
+        return {
+            "date": result["date"],
+            "resolution": result["resolution"],
+            "period_minutes": result["period_minutes"],
+            "start": period["start"] if period is not None else None,
+            "end": period["end"] if period is not None else None,
+            "average_total": period["average_total"] if period is not None else None,
+            "unit": period["unit"] if period is not None else None,
+            "consumption_kwh": consumption_kwh,
+            "estimated_cost": (
+                period["average_total"] * consumption_kwh
+                if period is not None and consumption_kwh is not None
+                else None
+            ),
+            "available_interval_count": electricity["available_interval_count"],
+            "coverage_seconds": electricity["coverage_seconds"],
+            "expected_seconds": electricity["expected_seconds"],
+            "status": electricity["status"],
+        }
 
     async def get_highest_period(
         self,
