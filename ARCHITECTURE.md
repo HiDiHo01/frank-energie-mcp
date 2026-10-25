@@ -36,7 +36,7 @@ FastMCP handlers -> minimal AccountResponse / SitesResponse
 | Module | Responsibility |
 | --- | --- |
 | `__main__.py` | Invokes `server.main()` |
-| `server.py` | FastMCP creation, fourteen tool registrations, resource, prompt, safe tool error handling, transport configuration, and minimal account/site responses |
+| `server.py` | FastMCP creation, twenty-nine tool registrations, resource, prompt, safe tool error handling, transport configuration, and minimal account/site responses |
 | `library.py` | `FrankEnergieService`, typed upstream protocol, managed `FrankEnergieLibraryBridge`, environment configuration, and active-interval selection |
 | `price_schemas.py` | Strict Pydantic price models, explicit field whitelisting, timestamp/amount validation, JSON normalization, and array bounds |
 | `tools/__init__.py` | Legacy package retained for import compatibility; tool implementations now live in `server.py` |
@@ -48,7 +48,7 @@ The unused `auth.py` and `config.py` placeholders were removed; authentication a
 
 ### MCP layer
 
-- Expose fourteen asynchronous read-only tools, one static resource, and one static prompt.
+- Expose twenty-nine asynchronous read-only tools, one static resource, and one static prompt.
 - Validate `resolution` as `PT15M` or `PT60M` at the tool boundary.
 - Use `Europe/Amsterdam` dates for today/tomorrow and optional-date statistical price requests.
 - Select upstream `current_hour` records for current electricity/gas prices.
@@ -73,6 +73,18 @@ The unused `auth.py` and `config.py` placeholders were removed; authentication a
 7. FastMCP returns the response, or a generic `ToolError` on handled failures.
 
 Price interval normalization requires ordered timezone-aware timestamps, finite numeric totals, and no more than 200 intervals per energy type for full-day results. This is a defensive MCP response-size limit, **not** an upstream API limit. The upstream library supports `PT15M` and `PT60M`; complete Europe/Amsterdam days produce 92/96/100 or 23/24/25 intervals respectively, including DST transitions. The cap allows headroom and does not assert that upstream always returns complete days.
+
+## Registered tool groups
+
+The 29 tools registered by `create_server()` in `server.py` are grouped by purpose:
+
+- **Public price retrieval (4):** `get_current_prices`, `get_today_prices`, `get_tomorrow_prices`, and `get_gas_price`.
+- **Daily price comparison and statistics (7):** `compare_days`, `get_average_prices`, `get_lowest_price`, `get_highest_price`, `get_price_trend`, `get_price_statistics`, and `get_price_volatility`.
+- **Price windows and cost analysis (8):** `get_price_threshold_periods`, `get_negative_price_periods`, `get_best_split_periods`, `get_lowest_period`, `get_highest_period`, `get_best_start_time`, `calculate_energy_cost`, and `calculate_battery_savings`.
+- **Charging analysis (8):** `get_charging_cost_breakdown`, `get_charging_efficiency_analysis`, `get_charging_power_analysis`, `get_charging_start_time_analysis`, `get_charging_deadline_analysis`, `compare_charging_strategies`, `get_optimal_charging_schedule`, and `get_price_forecast_summary`.
+- **Privacy-preserving account operations (2):** `get_account` and `list_sites`.
+
+Tool registration and boundary error handling stay in `server.py`; calculation and upstream access belong in `FrankEnergieService` in `library.py`. Price normalization uses `price_schemas.py`, while account and site responses expose only minimal validated fields. See `MCP_SPEC.md` for individual tool signatures and response contracts.
 
 ## Daily statistics data flow
 
